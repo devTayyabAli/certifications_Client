@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import OnboardingShell, {
   ClockIcon,
@@ -44,6 +45,13 @@ export default function WalletPage() {
       highlights={walletHighlights}
     >
       <div className="w-full space-y-4">
+        {/* Back to the previous step — the profile form re-opens with what was saved */}
+        <Link
+          href="/profile"
+          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#7c2ae8] transition-colors hover:underline"
+        >
+          ← Back to profile
+        </Link>
         <div>
           <h1 className="text-[24px] font-bold tracking-tight text-[#171730]">
             Connect your wallet
