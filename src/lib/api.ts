@@ -403,6 +403,8 @@ export interface ModuleQuizSummary {
   maxAttempts: number;
   attemptsUsed: number;
   isPassed: boolean;
+  /** Skipped after using every attempt: no badge, but counts as done for the certificate */
+  isSkipped?: boolean;
 }
 
 export interface ModuleItem {
@@ -657,11 +659,12 @@ export interface QuizData {
   /** Within the current round of attempts */
   attemptsUsed: number;
   attemptsRemaining: number;
-  /** Set while a used-up round is resting; a fresh round opens at this time */
+  /** Always null now: out of attempts means start over or skip, no waiting */
   retryAvailableAt: string | null;
-  /** 0 = no fresh rounds once attempts are used up */
   retryAfterHours: number;
   isPassed: boolean;
+  /** Skipped after using every attempt: no badge, but counts as done for the certificate */
+  isSkipped?: boolean;
   badge: { name: string; image: string };
   questions: QuizQuestion[];
   /** An attempt the learner started and hasn't finished */
@@ -694,6 +697,16 @@ export const quizApi = {
       method: "POST",
       body: JSON.stringify({ questionNumber, selectedOption }),
     });
+  },
+
+  /** Out of attempts (or skipped): start over with a fresh set of attempts. */
+  async restart(moduleIdOrSlug: string) {
+    return request<QuizData>(`/quiz/${moduleIdOrSlug}/restart`, { method: "POST" });
+  },
+
+  /** Out of attempts: skip this week's quiz — no badge, still counts toward the certificate. */
+  async skip(moduleIdOrSlug: string) {
+    return request<QuizData>(`/quiz/${moduleIdOrSlug}/skip`, { method: "POST" });
   },
 };
 

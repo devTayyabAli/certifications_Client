@@ -146,7 +146,7 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
           You need {result.passingScore} to earn the badge.{' '}
           {result.attemptsRemaining > 0
             ? `You have ${result.attemptsRemaining} attempt${result.attemptsRemaining === 1 ? '' : 's'} left — rewatch these parts first:`
-            : `That was your last attempt. Rewatch these parts before retrying.`}
+            : `That was your last attempt. Rewatch these parts, then you can start over or skip this quiz (without the week ${m.week} badge) from the module page.`}
         </p>
         <div className="mt-4 space-y-2">
           {result.review.map((r) => (

@@ -25,18 +25,152 @@ const card = 'rounded-2xl border border-[#ececf2] bg-white p-5 sm:p-6 shadow-2xs
 const share = (text: string) =>
   `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
 
+/** Skipped quiz: start it over (fresh attempts) and open it straight away. */
+function TakeAgainButton({ onRestart }: { onRestart: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <>
+      <Button
+        loading={busy}
+        loadingLabel="Starting over…"
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await onRestart();
+          } catch (e) {
+            setError(e instanceof Error && e.message ? e.message : 'Something went wrong. Please try again.');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Take the quiz again
+      </Button>
+      {error && (
+        <p role="alert" className="text-[12px] text-red-500">
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+/** All attempts used without passing: start over, or skip this week's quiz (no badge). */
+function OutOfAttempts({
+  m,
+  quiz,
+  onRestart,
+  onSkip,
+}: {
+  m: ModuleItem;
+  quiz: QuizData;
+  onRestart: () => Promise<void>;
+  onSkip: () => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState<'restart' | 'skip' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const last = quiz.lastResult;
+
+  const run = async (kind: 'restart' | 'skip', action: () => Promise<void>) => {
+    setBusy(kind);
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Something went wrong. Please try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-[#ececf2] bg-white p-5 sm:p-6 space-y-4">
+      <span className="text-[11.5px] font-medium text-[#7c2ae8]">Out of attempts</span>
+      <div>
+        <h4 className="text-[16.5px] font-medium text-[#171730]">Not quite this time</h4>
+        <p className="mt-1.5 text-[12.5px] leading-5 text-[#5f5f7a]">
+          You’ve used all {quiz.maxAttempts} attempts
+          {last ? ` (last: ${last.score} of ${last.totalQuestions})` : ''}. That’s okay. Rewatch the
+          session and start over, or skip this quiz and keep going.
+        </p>
+      </div>
+      {confirming ? (
+        <div className="space-y-3 rounded-xl border border-[#fde68a] bg-[#fffbeb] p-3.5">
+          <p className="text-[12.5px] leading-5 text-[#92400e]">
+            If you skip, you won’t earn the week {m.week} badge. It still counts as done for your
+            certificate, and you can take the quiz again later.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              size="md"
+              showIcon={false}
+              loading={busy === 'skip'}
+              loadingLabel="Skipping…"
+              disabled={!!busy}
+              onClick={() => run('skip', onSkip)}
+            >
+              Skip without the badge
+            </Button>
+            <button
+              type="button"
+              disabled={!!busy}
+              onClick={() => setConfirming(false)}
+              className="link-cta text-[12.5px] font-medium text-[#7c2ae8]"
+            >
+              Keep trying
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          <Button
+            loading={busy === 'restart'}
+            loadingLabel="Starting over…"
+            disabled={!!busy}
+            onClick={() => run('restart', onRestart)}
+          >
+            Start over
+          </Button>
+          <div className="text-center">
+            <button
+              type="button"
+              disabled={!!busy}
+              onClick={() => setConfirming(true)}
+              className="link-cta text-[12.5px] font-medium text-[#5f5f7a]"
+            >
+              Skip this quiz
+            </button>
+          </div>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-[12px] text-red-500">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function QuizCard({
   m,
   quiz,
   part1Done,
   certificateUnlocked,
   onStart,
+  onRestart,
+  onSkip,
 }: {
   m: ModuleItem;
   quiz: QuizData | null;
   part1Done: boolean;
   certificateUnlocked: boolean;
   onStart: () => void;
+  onRestart: () => Promise<void>;
+  onSkip: () => Promise<void>;
 }) {
   if (!quiz) {
     return (
@@ -97,32 +231,25 @@ function QuizCard({
     );
   }
 
-  const outOfAttempts = quiz.attemptsRemaining <= 0 && !quiz.currentAttempt;
-  if (outOfAttempts) {
-    const retryWhen = quiz.retryAvailableAt ? dayTime(quiz.retryAvailableAt) : null;
-    const retryIn = quiz.retryAvailableAt ? timeUntil(quiz.retryAvailableAt) : null;
-
+  if (quiz.isSkipped) {
     return (
       <div className={card}>
-        <span className="text-[11.5px] font-medium text-[#7c2ae8]">Out of attempts</span>
+        <span className="text-[11.5px] font-medium text-[#8e8ea6]">Skipped</span>
         <div>
-          <h4 className="text-[16.5px] font-medium text-[#171730]">Not quite this time</h4>
+          <h4 className="text-[16.5px] font-medium text-[#171730]">No week {m.week} badge</h4>
           <p className="mt-1.5 text-[12.5px] leading-5 text-[#5f5f7a]">
-            You’ve used all {quiz.maxAttempts} attempts
-            {quiz.lastResult ? ` (last: ${quiz.lastResult.score} of ${quiz.lastResult.totalQuestions})` : ''}.{' '}
-            {retryWhen
-              ? `Take some time to rewatch the session — a fresh round of attempts opens ${retryIn ?? 'soon'}.`
-              : 'Please reach out to the Si Her team.'}
+            You skipped this quiz, so it counts as done for your certificate but without the badge.
+            Want the badge after all? You can take it again any time.
           </p>
         </div>
-        {retryWhen && (
-          <div className="rounded-xl border border-[#ddd6fe] bg-[#f5f3ff] p-3 text-[12px] text-[#5b21b6]">
-            <p className="font-medium">You can try again {retryIn ?? 'shortly'}</p>
-            <p className="mt-0.5 text-[11px] text-[#7c3aed]">{retryWhen}</p>
-          </div>
-        )}
+        <TakeAgainButton onRestart={onRestart} />
       </div>
     );
+  }
+
+  const outOfAttempts = quiz.attemptsRemaining <= 0 && !quiz.currentAttempt;
+  if (outOfAttempts) {
+    return <OutOfAttempts m={m} quiz={quiz} onRestart={onRestart} onSkip={onSkip} />;
   }
 
   const retry = !!quiz.lastResult && !quiz.lastResult.passed;
@@ -470,6 +597,16 @@ export default function ModuleView({ slug }: { slug: string }) {
               part1Done={part1Done}
               certificateUnlocked={certificateUnlocked}
               onStart={() => setQuizOpen(true)}
+              onRestart={async () => {
+                // a fresh set of attempts, then straight into the quiz
+                await quizApi.restart(slug);
+                await load();
+                setQuizOpen(true);
+              }}
+              onSkip={async () => {
+                await quizApi.skip(slug);
+                await load();
+              }}
             />
 
             {m.speakers && m.speakers.length > 0 && (

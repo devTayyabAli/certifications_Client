@@ -290,15 +290,22 @@ function FeaturedModule({
   onSchedule: (m: ModuleItem) => void;
 }) {
   const upcoming = m.sessionState === "upcoming";
+  // the week's own cover from the CMS; the shared cover only when the CMS has none
+  const cover = m.bannerUrl || m.thumbnailUrl;
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#17142b] via-[#331c4b] to-[#121124] p-6 text-white shadow-md">
-      <Image
-        alt=""
-        fill
-        sizes="(min-width: 1024px) 960px, 100vw"
-        className="object-cover object-right"
-        src={assetPath("/v2/module-cover.webp")}
-      />
+      {cover ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img alt="" className="absolute inset-0 size-full object-cover object-right" src={cover} />
+      ) : (
+        <Image
+          alt=""
+          fill
+          sizes="(min-width: 1024px) 960px, 100vw"
+          className="object-cover object-right"
+          src={assetPath("/v2/module-cover.webp")}
+        />
+      )}
       <div className="absolute inset-0 bg-gradient-to-r from-[#131124]/85 via-[#1a142e]/50 to-[#1a142e]/5 pointer-events-none" />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#131124]/60 to-transparent pointer-events-none sm:hidden" />
       <div className="relative z-10">
@@ -459,7 +466,7 @@ function SessionCard({
             <span className="rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-1 text-[12px] text-[#16a34a]">
               Badge earned
             </span>
-          ) : (m.quiz as { isSkipped?: boolean })?.isSkipped ? (
+          ) : m.quiz?.isSkipped ? (
             <span className="rounded-full border border-[#e4e4ed] bg-[#f6f6fa] px-3 py-1 text-[12px] text-[#7e7e96]">
               Skipped · no badge
             </span>
@@ -571,7 +578,7 @@ function CertificateRow({
   );
 }
 
-function ReadyToMint() {
+function ReadyToMint({ modules, badges }: { modules: number; badges: number }) {
   return (
     <div className="relative overflow-hidden rounded-3xl p-7 sm:p-8 text-white shadow-xl border border-purple-500/20 min-h-[260px] flex items-center">
       <Image
@@ -590,20 +597,12 @@ function ReadyToMint() {
           Your certificate is ready
         </h2>
         <p className="text-[12.5px] leading-relaxed text-white/80">
-          Twelve modules, thirteen badges, one verifiable record on Base. Minting writes it to your wallet — it’s yours, not ours.
+          {modules} {modules === 1 ? "module" : "modules"}, {badges} {badges === 1 ? "badge" : "badges"}, one verifiable record on Base. Minting writes it to your wallet — it’s yours, not ours.
         </p>
         <div className="pt-2 flex flex-wrap items-center gap-4">
           <ButtonLink href="/certificate" variant="white" size="md">
             Mint on Base
           </ButtonLink>
-          <div className="flex items-center gap-2">
-            <div className="flex -space-x-1.5">
-              <span className="size-5 rounded-full bg-purple-400 border border-white" />
-              <span className="size-5 rounded-full bg-blue-400 border border-white" />
-              <span className="size-5 rounded-full bg-emerald-400 border border-white" />
-            </div>
-            <span className="text-[11.5px] text-white/75">96 learners have minted theirs</span>
-          </div>
         </div>
       </div>
     </div>
@@ -646,7 +645,13 @@ function PartnerCard({ p }: { p: PartnerItem }) {
     <article className="group flex flex-col rounded-2xl border border-[#ececf2] bg-white p-5 transition hover:border-[#dcd0f2]">
       <div className="flex items-start justify-between gap-3">
         <div className="grid h-11 min-w-11 place-items-center rounded-xl border border-[#ececf2] bg-white px-3">
-          {PARTNER_MARK[p.id] ?? <span className="text-[14px] font-medium text-[#151534]">{p.title.charAt(0)}</span>}
+          {p.imageUrl ? (
+            // the partner's logo from the CMS
+            // eslint-disable-next-line @next/next/no-img-element
+            <img alt={p.title} className="max-h-7 max-w-[112px] object-contain" src={p.imageUrl} />
+          ) : (
+            PARTNER_MARK[p.id] ?? <span className="text-[14px] font-medium text-[#151534]">{p.title.charAt(0)}</span>
+          )}
         </div>
         <span className="shrink-0 rounded-full bg-[#f4effe] px-2.5 py-1 text-[11.5px] font-medium text-[#7c2ae8]">
           {tagCase(p.tag)}
@@ -735,7 +740,9 @@ function DashboardContent() {
     );
   }
 
-  const featured = modules.find((m) => !m.quiz?.isPassed) ?? null;
+  // a skipped quiz counts as done, like a passed one (just without the badge)
+  const isDone = (m: ModuleItem) => !!m.quiz?.isPassed || !!m.quiz?.isSkipped;
+  const featured = modules.find((m) => !isDone(m)) ?? null;
   const rest = modules.filter((m) => m !== featured);
   const earned = badges?.earnedCount ?? 0;
   const earnedBadgeNames = new Set((badges?.badges ?? []).map((b) => b.name));
@@ -948,10 +955,10 @@ function DashboardContent() {
             )}
             <CertificateRow
               unlocked={unlocked}
-              passed={modules.filter((m) => m.quiz?.isPassed).length}
+              passed={modules.filter(isDone).length}
               total={modules.length}
             />
-            {unlocked && cert?.status !== "minted" && <ReadyToMint />}
+            {unlocked && cert?.status !== "minted" && <ReadyToMint modules={modules.length} badges={earned} />}
           </div>
         </section>
 
