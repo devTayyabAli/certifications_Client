@@ -177,9 +177,9 @@ function OneInchIcon({ className = "size-8" }: { className?: string }) {
 
 function BaseChainBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e4e4ed] bg-[#f9fafc] px-2.5 py-1 text-[10px] font-bold tracking-wider text-[#171730]">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e4e4ed] bg-[#f9fafc] px-2.5 py-1 text-[10px] font-medium text-[#171730]">
       <span className="size-2 rounded-full bg-[#0052ff]" />
-      BASE MAINNET
+      Base Mainnet
     </span>
   );
 }
@@ -566,8 +566,8 @@ export default function ConnectWalletForm() {
             </svg>
           </span>
           <div>
-            <p className="text-[13px] font-bold text-[#171730]">Wallet connected</p>
-            <p className="mt-1 font-mono text-[12px] text-[#5f5f7a]">
+            <p className="text-[13px] font-medium text-[#171730]">Wallet connected</p>
+            <p className="mt-1 tabular-nums text-[12px] text-[#5f5f7a]">
               {truncateAddress(effectiveWalletState.address)}
             </p>
           </div>
@@ -596,10 +596,10 @@ export default function ConnectWalletForm() {
 
         {/* Full address row */}
         <div className="rounded-xl border border-[#e4e4ed] bg-[#f9fafc] px-4 py-3 flex items-center justify-between gap-3">
-          <span className="text-[11px] font-semibold tracking-wider text-[#8e8ea6] uppercase">
+          <span className="text-[11px] font-medium text-[#8e8ea6]">
             Address
           </span>
-          <span className="font-mono text-[11.5px] text-[#171730] break-all text-right">
+          <span className="tabular-nums text-[11.5px] text-[#171730] break-all text-right">
             {effectiveWalletState.address}
           </span>
         </div>
@@ -650,7 +650,7 @@ export default function ConnectWalletForm() {
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-[12px] font-semibold tracking-wider text-[#8e8ea6] uppercase">
+        <p className="text-[12px] font-medium text-[#8e8ea6]">
           Choose wallet
         </p>
         <BaseChainBadge />
@@ -676,7 +676,7 @@ export default function ConnectWalletForm() {
                 <div className="flex items-center gap-3.5 min-w-0">
                   {opt.icon}
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-semibold text-[#171730] group-hover:text-[#6d25d6] transition">
+                    <p className="text-[13.5px] font-medium text-[#171730] group-hover:text-[#6d25d6] transition">
                       {opt.name}
                     </p>
                     <p className="text-[11px] text-[#8e8ea6]">
@@ -684,8 +684,8 @@ export default function ConnectWalletForm() {
                     </p>
                   </div>
                 </div>
-                <span className="shrink-0 rounded-full bg-[#ede9fe] text-[#6d25d6] border border-[#ddd6fe] px-2.5 py-0.5 text-[10px] font-bold">
-                  QR CODE
+                <span className="shrink-0 rounded-full bg-[#ede9fe] text-[#6d25d6] border border-[#ddd6fe] px-2.5 py-0.5 text-[10px] font-medium">
+                  QR code
                 </span>
               </button>
             );
@@ -706,7 +706,7 @@ export default function ConnectWalletForm() {
                   >
                     {opt.icon}
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-semibold text-[#171730] group-hover:text-[#6d25d6] transition flex items-center gap-2">
+                      <p className="text-[13.5px] font-medium text-[#171730] group-hover:text-[#6d25d6] transition flex items-center gap-2">
                         <span>{opt.name}</span>
                       </p>
                       <p className="text-[11px] text-[#8e8ea6]">
@@ -719,7 +719,7 @@ export default function ConnectWalletForm() {
                     <button
                       type="button"
                       onClick={() => setIs1inchQrOpen(true)}
-                      className="rounded-full bg-[#ede9fe] text-[#6d25d6] hover:bg-[#ddd6fe] border border-[#ddd6fe] px-2.5 py-1 text-[10px] font-bold tracking-wider transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                      className="rounded-full bg-[#ede9fe] text-[#6d25d6] hover:bg-[#ddd6fe] border border-[#ddd6fe] px-2.5 py-1 text-[10px] font-medium transition cursor-pointer flex items-center gap-1 shadow-2xs"
                     >
                       <svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -728,7 +728,7 @@ export default function ConnectWalletForm() {
                         <rect x="14" y="14" width="3" height="3" />
                         <rect x="18" y="18" width="3" height="3" />
                       </svg>
-                      <span>QR CODE</span>
+                      <span>QR code</span>
                     </button>
                     <a
                       href={opt.downloadUrl ?? "https://1inch.io/wallet/"}
@@ -737,7 +737,7 @@ export default function ConnectWalletForm() {
                       title="Visit official website"
                       className="p-1 rounded-lg text-[#9ca3af] hover:text-[#171730] hover:bg-gray-100 transition text-[11px]"
                     >
-                      ↗
+                      <Arrow dir="up-right" />
                     </a>
                   </div>
                 </div>
@@ -757,7 +757,7 @@ export default function ConnectWalletForm() {
               >
                 {opt.icon}
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13.5px] font-semibold text-[#5f5f7a] group-hover:text-[#171730] transition">
+                  <p className="text-[13.5px] font-medium text-[#5f5f7a] group-hover:text-[#171730] transition">
                     {opt.name}
                   </p>
                   <p className="text-[11px] text-[#9ca3af] inline-flex items-center gap-1">
@@ -798,7 +798,7 @@ export default function ConnectWalletForm() {
             >
               {opt.icon}
               <div className="min-w-0 flex-1">
-                <p className="text-[13.5px] font-semibold text-[#171730]">{opt.name}</p>
+                <p className="text-[13.5px] font-medium text-[#171730]">{opt.name}</p>
                 <p className="text-[11px] text-[#8e8ea6]">
                   {switchingChain
                     ? "Switching to Base…"
@@ -853,7 +853,7 @@ export default function ConnectWalletForm() {
             href="https://metamask.io/download/"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-[#7c2ae8] underline underline-offset-2"
+            className="font-medium text-[#7c2ae8] underline underline-offset-2"
           >
             Install MetaMask
           </a>{" "}

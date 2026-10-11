@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ReactNode } from "react";
 import { assetPath } from "@/lib/constants";
+import { Check } from "@/components/ui/Check";
 
 export const ONBOARDING_STEPS = [
   { label: "Email verified", doneLabel: "Email verified" },
@@ -12,7 +13,7 @@ export const ONBOARDING_STEPS = [
 const STEP_COUNT = ONBOARDING_STEPS.length;
 
 const buttonBaseClasses =
-  "flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-[14.5px] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c2ae8]";
+  "flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-[14.5px] font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c2ae8]";
 
 export function primaryButtonClasses(variant: "active" | "muted" = "active") {
   return variant === "muted"
@@ -75,19 +76,15 @@ export default function OnboardingShell({
     STEP_COUNT > 1 ? currentStep / (STEP_COUNT - 1) : 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-white font-sans antialiased text-[#171730]">
+    <div className="flex min-h-dvh flex-col bg-[#f7f7fb] font-sans antialiased text-[#171730] lg:h-dvh">
       {/* Header bar across full width */}
       <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#ececf2] bg-white px-6 sm:px-10">
         <div className="flex items-center gap-3.5">
           <Wordmark />
           <span className="hidden items-center gap-1.5 rounded-full border border-[#e4e4ed] bg-[#f9fafc] px-3 py-1 sm:inline-flex">
-            <span className="text-[9px] font-semibold tracking-[0.14em] text-[#8e8ea6]">
-              POWERED BY
-            </span>
+            <span className="text-[9px] font-medium text-[#8688ae]">Powered by</span>
             <span className="size-2 rounded-full bg-[#0052ff]" />
-            <span className="text-[9.5px] font-bold tracking-[0.14em] text-[#171730]">
-              BASE
-            </span>
+            <span className="text-[11px] font-medium text-[#0052ff]">BASE</span>
           </span>
         </div>
 
@@ -95,9 +92,9 @@ export default function OnboardingShell({
       </header>
 
       {/* Main split: 50% left (form), 50% right (artwork) */}
-      <main className="flex flex-1 flex-col lg:flex-row overflow-y-auto">
+      <main className="flex flex-1 flex-col lg:min-h-0 lg:flex-row">
         {/* Left column: Stepper + Card / Form */}
-        <div className="flex flex-2 items-start lg:items-center justify-center bg-[#f7f7fb] px-4 py-6 sm:px-8 lg:py-8 lg:max-h-[calc(100vh-64px)]">
+        <div className="flex flex-2 justify-center bg-[#f7f7fb] px-4 py-6 sm:px-8 lg:min-h-0 lg:overflow-y-auto lg:py-8">
           <div className="w-full max-w-[440px] my-auto">
             {/* ── Stepper ── */}
             <div className="relative mb-8 w-full">
@@ -140,7 +137,7 @@ export default function OnboardingShell({
                       {/* Label */}
                       <span
                         className={`mt-2 text-center text-[10px] sm:text-[12px] leading-tight ${isActive
-                          ? "font-bold text-[#171730]"
+                          ? "font-medium text-[#171730]"
                           : isDone
                             ? "font-normal text-[#6b7280]"
                             : "font-normal text-[#9ca3af]"
@@ -166,7 +163,7 @@ export default function OnboardingShell({
         </div>
 
         {/* Right column: Edge-to-edge artwork panel */}
-        <aside className="relative flex flex-1 flex-col justify-between overflow-hidden bg-[#0d0f18] p-6 sm:p-12 min-h-[440px] lg:min-h-[calc(100vh-64px)] lg:p-16">
+        <aside className="relative flex flex-1 flex-col justify-between overflow-hidden bg-[#0d0f18] p-6 sm:p-12 min-h-[440px] lg:min-h-0 lg:p-16">
           <Image
             src={assetPath("/logIn.png")}
             alt="Si Her DeFi Artwork"
@@ -184,7 +181,7 @@ export default function OnboardingShell({
 
           {/* Top text content */}
           <div className="relative z-10 max-w-lg">
-            <h2 className="text-[20px] font-semibold tracking-tight text-white leading-snug">
+            <h2 className="text-[20px] font-medium tracking-tight text-white leading-snug">
               {rightTitle}
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-[#FFFFFF] max-w-md">
@@ -204,7 +201,7 @@ export default function OnboardingShell({
                     {highlight.icon}
                   </span>
                   <div className="min-w-0 pt-0.5">
-                    <p className="text-[13.5px] font-semibold text-white leading-snug">
+                    <p className="text-[13.5px] font-medium text-white leading-snug">
                       {highlight.title}
                     </p>
                     <p className="mt-0.5 text-[12px] leading-relaxed text-white/70">
@@ -225,21 +222,9 @@ export default function OnboardingShell({
 // Internal icon components
 // ---------------------------------------------------------------------------
 
+// the Figma tick (components/ui/Check), sized for the small step dots
 function CheckMarkMini() {
-  return (
-    <svg
-      viewBox="0 0 12 12"
-      aria-hidden="true"
-      className="size-2.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="2.5 6 5 8.5 9.5 3.5" />
-    </svg>
-  );
+  return <Check className="size-3" strokeWidth={2.6} />;
 }
 
 // ---------------------------------------------------------------------------

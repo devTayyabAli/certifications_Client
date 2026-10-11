@@ -82,13 +82,13 @@ export function BrowserWalletIcon({ className = "size-10" }: { className?: strin
     >
       <div className="grid grid-cols-2 gap-1 size-7 place-items-center bg-white/5 rounded-lg p-1">
         {/* Fox */}
-        <div className="size-2.5 rounded-[2px] bg-[#e2761b] flex items-center justify-center text-[5px] text-white font-bold">🦊</div>
+        <div className="size-2.5 rounded-[2px] bg-[#e2761b] flex items-center justify-center text-[5px] text-white font-medium">🦊</div>
         {/* 1inch */}
-        <div className="size-2.5 rounded-[2px] bg-black flex items-center justify-center text-[4.5px] text-white font-bold font-mono">1&quot;</div>
+        <div className="size-2.5 rounded-[2px] bg-black flex items-center justify-center text-[4.5px] text-white  font-medium">1&quot;</div>
         {/* Coinbase Blue */}
-        <div className="size-2.5 rounded-[2px] bg-[#0052ff] flex items-center justify-center text-[5px] text-white font-bold">●</div>
+        <div className="size-2.5 rounded-[2px] bg-[#0052ff] flex items-center justify-center text-[5px] text-white font-medium">●</div>
         {/* Phantom Purple */}
-        <div className="size-2.5 rounded-[2px] bg-[#ab9ff2] flex items-center justify-center text-[5px] text-white font-bold">👻</div>
+        <div className="size-2.5 rounded-[2px] bg-[#ab9ff2] flex items-center justify-center text-[5px] text-white font-medium">👻</div>
       </div>
     </div>
   );
@@ -359,7 +359,7 @@ function WalletConnectModalBody() {
           {/* Title */}
           <h2
             id="modal-connect-wallet-title"
-            className="text-[16.5px] font-semibold tracking-tight text-white select-none"
+            className="text-[16.5px] font-medium tracking-tight text-white select-none"
           >
             {currentView === "walletconnect"
               ? "WalletConnect"
@@ -415,11 +415,11 @@ function WalletConnectModalBody() {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <WalletConnectIcon />
-                  <span className="text-[15px] font-semibold text-white group-hover:text-white truncate">
+                  <span className="text-[15px] font-medium text-white group-hover:text-white truncate">
                     WalletConnect
                   </span>
                 </div>
-                <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold tracking-wider text-[#38bdf8] bg-[#0c2338] border border-[#0284c7]/30 rounded-md">
+                <span className="shrink-0 px-2 py-0.5 text-[10px] font-medium text-[#38bdf8] bg-[#0c2338] border border-[#0284c7]/30 rounded-md">
                   QR CODE
                 </span>
               </button>
@@ -433,7 +433,7 @@ function WalletConnectModalBody() {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <MetaMaskFoxIcon />
-                  <span className="text-[15px] font-semibold text-white group-hover:text-white truncate">
+                  <span className="text-[15px] font-medium text-white group-hover:text-white truncate">
                     MetaMask
                   </span>
                 </div>
@@ -458,7 +458,7 @@ function WalletConnectModalBody() {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <PhantomIcon />
-                  <span className="text-[15px] font-semibold text-white group-hover:text-white truncate">
+                  <span className="text-[15px] font-medium text-white group-hover:text-white truncate">
                     Phantom
                   </span>
                 </div>
@@ -483,14 +483,14 @@ function WalletConnectModalBody() {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <OneInchWalletIcon />
-                  <span className="text-[15px] font-semibold text-white group-hover:text-white truncate">
+                  <span className="text-[15px] font-medium text-white group-hover:text-white truncate">
                     1inch Wallet
                   </span>
                 </div>
                 {connectingWallet === "1inch Wallet" ? (
                   <span className="size-4 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
                 ) : (
-                  <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold tracking-wider text-[#38bdf8] bg-[#0c2338] border border-[#0284c7]/30 rounded-md">
+                  <span className="shrink-0 px-2 py-0.5 text-[10px] font-medium text-[#38bdf8] bg-[#0c2338] border border-[#0284c7]/30 rounded-md">
                     QR CODE
                   </span>
                 )}
@@ -505,7 +505,7 @@ function WalletConnectModalBody() {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <BrowserWalletIcon />
-                  <span className="text-[15px] font-semibold text-white group-hover:text-white truncate">
+                  <span className="text-[15px] font-medium text-white group-hover:text-white truncate">
                     Browser Wallet
                   </span>
                 </div>
@@ -525,11 +525,11 @@ function WalletConnectModalBody() {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <AllWalletsIcon />
-                  <span className="text-[15px] font-semibold text-white group-hover:text-white truncate">
+                  <span className="text-[15px] font-medium text-white group-hover:text-white truncate">
                     All Wallets
                   </span>
                 </div>
-                <span className="shrink-0 px-2 py-0.5 text-[11px] font-semibold text-[#8e8ea6] bg-[#292a36] rounded-md">
+                <span className="shrink-0 px-2 py-0.5 text-[11px] font-medium text-[#8e8ea6] bg-[#292a36] rounded-md">
                   100+
                 </span>
               </button>
@@ -685,7 +685,7 @@ function WalletConnectModalBody() {
                   className="w-full flex items-center justify-between p-2.5 rounded-xl bg-[#1d1e26] hover:bg-[#252632] transition cursor-pointer text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="size-8 rounded-lg bg-gradient-to-tr from-[#001eff] via-[#00e1ff] to-[#ff2b00] grid place-items-center text-white text-[12px] font-bold">
+                    <div className="size-8 rounded-lg bg-gradient-to-tr from-[#001eff] via-[#00e1ff] to-[#ff2b00] grid place-items-center text-white text-[12px] font-medium">
                       🌈
                     </div>
                     <span className="text-[14px] font-medium text-white">Rainbow</span>
@@ -709,7 +709,7 @@ function WalletConnectModalBody() {
                     <OneInchWalletIcon className="size-8" />
                     <span className="text-[14px] font-medium text-white">1inch Wallet</span>
                   </div>
-                  <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider text-[#38bdf8] bg-[#0c2338] border border-[#0284c7]/30 rounded-md">
+                  <span className="px-2 py-0.5 text-[10px] font-medium text-[#38bdf8] bg-[#0c2338] border border-[#0284c7]/30 rounded-md">
                     QR CODE
                   </span>
                 </button>
@@ -725,7 +725,7 @@ function WalletConnectModalBody() {
                 <button
                   type="button"
                   onClick={() => setOneInchTab("connect")}
-                  className={`py-1.5 text-[12px] font-semibold rounded-lg transition cursor-pointer ${
+                  className={`py-1.5 text-[12px] font-medium rounded-lg transition cursor-pointer ${
                     oneInchTab === "connect"
                       ? "bg-[#292a38] text-white shadow-sm"
                       : "text-[#9ca3af] hover:text-white"
@@ -736,7 +736,7 @@ function WalletConnectModalBody() {
                 <button
                   type="button"
                   onClick={() => setOneInchTab("install")}
-                  className={`py-1.5 text-[12px] font-semibold rounded-lg transition cursor-pointer ${
+                  className={`py-1.5 text-[12px] font-medium rounded-lg transition cursor-pointer ${
                     oneInchTab === "install"
                       ? "bg-[#292a38] text-white shadow-sm"
                       : "text-[#9ca3af] hover:text-white"
@@ -767,7 +767,7 @@ function WalletConnectModalBody() {
                     <button
                       type="button"
                       onClick={handleCopyWcUri}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#232430] hover:bg-[#2c2e3d] text-[13px] font-semibold text-white transition cursor-pointer border border-white/[0.06]"
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#232430] hover:bg-[#2c2e3d] text-[13px] font-medium text-white transition cursor-pointer border border-white/[0.06]"
                     >
                       {copiedLink ? (
                         <>
@@ -826,7 +826,7 @@ function WalletConnectModalBody() {
                       href="https://apps.apple.com/us/app/1inch-defi-wallet/id1546049391"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#232430] hover:bg-[#2c2e3d] text-[12px] font-semibold text-white border border-white/[0.06] transition"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#232430] hover:bg-[#2c2e3d] text-[12px] font-medium text-white border border-white/[0.06] transition"
                     >
                       App Store ↗
                     </a>
@@ -834,7 +834,7 @@ function WalletConnectModalBody() {
                       href="https://play.google.com/store/apps/details?id=io.oneinch.android"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#232430] hover:bg-[#2c2e3d] text-[12px] font-semibold text-white border border-white/[0.06] transition"
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#232430] hover:bg-[#2c2e3d] text-[12px] font-medium text-white border border-white/[0.06] transition"
                     >
                       Google Play ↗
                     </a>
@@ -851,7 +851,7 @@ function WalletConnectModalBody() {
                 <PhantomIcon className="size-10" />
               </div>
               <div>
-                <h3 className="text-[16px] font-semibold text-white">Install Phantom</h3>
+                <h3 className="text-[16px] font-medium text-white">Install Phantom</h3>
                 <p className="mt-1 text-[12.5px] text-[#9ca3af] leading-relaxed">
                   Phantom extension was not detected in this browser. Install Phantom to connect on Base and Ethereum.
                 </p>
@@ -860,7 +860,7 @@ function WalletConnectModalBody() {
                 href="https://phantom.app/download"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#ab9ff2] text-black text-[13.5px] font-bold hover:brightness-105 transition"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#ab9ff2] text-black text-[13.5px] font-medium hover:brightness-105 transition"
               >
                 Get Phantom ↗
               </a>

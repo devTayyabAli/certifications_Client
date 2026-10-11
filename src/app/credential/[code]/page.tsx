@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 
-import CertificateSheet from "@/components/certificate-sheet";
-import { Wordmark } from "@/components/onboarding-shell";
-import { API_BASE_URL, type PublicCertificate } from "@/lib/api";
+import Image from "next/image";
+import Link from "next/link";
+
+import { CertificateArt } from "@/components/certificate/CertificateArt";
+import { Arrow } from "@/components/ui/Arrow";
+import { Check } from "@/components/ui/Check";
+import { API_BASE_URL, type CertificateData, type PublicCertificate } from "@/lib/api";
 import { formatIssueDate } from "@/lib/certificate";
+import { assetPath } from "@/lib/constants";
 
 /**
  * Public certificate verification — anyone with the link (e.g. from LinkedIn)
@@ -47,72 +52,79 @@ export default async function CredentialPage({ params }: PageProps<"/credential/
   const { code } = await params;
   const cert = await loadCertificate(decodeURIComponent(code));
 
+  // the certificate card takes the learner's certificate shape; a public one has no wallet or open modules
+  const art: CertificateData | null = cert
+    ? {
+        status: cert.status,
+        recipientName: cert.recipientName,
+        walletAddress: null,
+        issuedAt: cert.issuedAt,
+        verificationCode: cert.verificationCode,
+        verifyUrl: null,
+        unlockModule: null,
+        content: cert.content,
+        badges: cert.badges,
+        totalBadges: cert.totalBadges,
+        stillOpen: [],
+        onChain: cert.onChain,
+        canMint: false,
+      }
+    : null;
+
   return (
     <div className="min-h-screen bg-[#f8f8fc] font-sans antialiased text-[#171730]">
-      <header className="border-b border-[#ececf2] bg-white">
-        <div className="mx-auto flex max-w-[960px] items-center justify-between px-4 py-3 sm:px-6">
-          <Wordmark />
-          <span className="text-[11px] font-semibold tracking-wider text-[#8e8ea6] uppercase">
-            Credential verification
-          </span>
-        </div>
+      <header className="flex h-16 items-center justify-between border-b border-[#ececf2] bg-white px-6 sm:px-10">
+        <Link href="/login">
+          <Image
+            alt="Si Her DeFi Artwork"
+            width={100}
+            height={100}
+            src={assetPath("/Logo · SI HER DeFi.png")}
+            style={{ width: "auto", height: "auto" }}
+          />
+        </Link>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e4e4ed] bg-[#f9fafc] px-3 py-1 text-[10px] font-medium">
+          <span className="size-2 rounded-full bg-[#0052ff]" />
+          Verified on Base
+        </span>
       </header>
 
-      <main className="mx-auto max-w-[960px] space-y-6 px-4 py-8 sm:px-6">
-        {!cert ? (
-          <div className="rounded-2xl border border-[#ececf2] bg-white p-8 text-center shadow-xs">
-            <span className="mx-auto grid size-12 place-items-center rounded-full bg-[#fef2f2] text-[20px] text-[#dc2626]">
-              ✕
-            </span>
-            <h1 className="mt-4 text-[20px] font-bold">We couldn’t verify this certificate</h1>
-            <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-[#5f5f7a]">
-              No Si Her DeFi certificate matches the code <span className="font-mono">{decodeURIComponent(code)}</span>.
-              Check the link, or ask the holder to share it again from their certificate page.
+      <main className="mx-auto max-w-[760px] space-y-5 px-4 py-10">
+        {!cert || !art ? (
+          <div className="rounded-2xl border border-[#ececf2] bg-white p-8 text-center">
+            <h1 className="text-[16px] font-medium">No certificate matches “{decodeURIComponent(code)}”</h1>
+            <p className="mt-1 text-[12.5px] text-[#5f5f7a]">
+              Check the link or credential ID and try again, or ask the holder to share it again from their certificate page.
             </p>
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-[#bbf7d0] bg-[#f0fdf4] p-5">
-              <div className="flex items-start gap-3">
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#16a34a] text-white">✓</span>
-                <div>
-                  <h1 className="text-[16px] font-bold text-[#14532d]">Verified credential</h1>
-                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#166534]">
-                    Issued to <strong>{cert.recipientName}</strong> by {cert.content.issuerName} on{" "}
-                    {formatIssueDate(cert.issuedAt)} · {cert.content.programName} {cert.content.cohortLabel}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right text-[11px] text-[#166534]">
-                <p className="font-semibold uppercase tracking-wider text-[9.5px]">Credential ID</p>
-                <p className="font-mono text-[12px]">{cert.verificationCode}</p>
-              </div>
+            <div className="flex items-center gap-2.5 rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[12.5px] text-[#166534]">
+              <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#16a34a] text-white">
+                <Check className="size-3.5" strokeWidth={2.4} />
+              </span>
+              <h1>
+                Valid credential · issued to <span className="font-medium">{cert.recipientName}</span> by{" "}
+                {cert.content.issuerName} on {formatIssueDate(cert.issuedAt)} · ID{" "}
+                <span className="tabular-nums">{cert.verificationCode}</span>
+              </h1>
             </div>
 
-            <CertificateSheet
-              recipientName={cert.recipientName}
-              content={cert.content}
-              badges={cert.badges}
-              totalBadges={cert.totalBadges}
-              issuedAt={cert.issuedAt}
-              verificationCode={cert.verificationCode}
-              verifyUrl={null}
-              onChain={cert.onChain}
-            />
+            <CertificateArt cert={art} preview={false} weekTitles={{}} />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[#ececf2] bg-white p-5 shadow-2xs space-y-2">
-                <h2 className="text-[10.5px] font-bold tracking-wider text-[#8e8ea6] uppercase">Modules passed</h2>
+              <div className="space-y-2 rounded-2xl border border-[#ececf2] bg-white p-5">
+                <h2 className="text-[11px] font-medium text-[#8e8ea6]">Modules passed</h2>
                 {cert.badges.length === 0 ? (
                   <p className="text-[12.5px] text-[#5f5f7a]">No module badges yet.</p>
                 ) : (
                   <ul className="space-y-1.5 text-[12.5px] text-[#171730]">
                     {cert.badges.map((b) => (
                       <li key={`${b.week}-${b.name}`} className="flex items-center gap-2">
-                        <span className="text-[#16a34a]">✓</span>
+                        <Check className="size-3.5 text-[#16a34a]" />
                         {b.week !== null && (
-                          <span className="font-mono text-[11px] text-[#8e8ea6]">
-                            W{String(b.week).padStart(2, "0")}
+                          <span className="tabular-nums text-[11px] text-[#8e8ea6]">
+                            Week {String(b.week).padStart(2, "0")}
                           </span>
                         )}
                         <span>{b.moduleTitle ?? b.name}</span>
@@ -121,8 +133,8 @@ export default async function CredentialPage({ params }: PageProps<"/credential/
                   </ul>
                 )}
               </div>
-              <div className="rounded-2xl border border-[#ececf2] bg-white p-5 shadow-2xs space-y-2">
-                <h2 className="text-[10.5px] font-bold tracking-wider text-[#8e8ea6] uppercase">On-chain record</h2>
+              <div className="space-y-2 rounded-2xl border border-[#ececf2] bg-white p-5">
+                <h2 className="text-[11px] font-medium text-[#8e8ea6]">On-chain record</h2>
                 {cert.onChain.explorerUrl ? (
                   <p className="text-[12.5px] text-[#5f5f7a]">
                     Minted on {cert.onChain.network} as token #{cert.onChain.tokenId}.{" "}
@@ -130,9 +142,9 @@ export default async function CredentialPage({ params }: PageProps<"/credential/
                       href={cert.onChain.explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-semibold text-[#7c2ae8] hover:underline"
+                      className="link-cta font-medium text-[#7c2ae8]"
                     >
-                      View on BaseScan ↗
+                      View on BaseScan <Arrow dir="up-right" />
                     </a>
                   </p>
                 ) : (
@@ -150,8 +162,8 @@ export default async function CredentialPage({ params }: PageProps<"/credential/
 
         <p className="text-center text-[11px] text-[#8e8ea6]">
           {cert ? "This page is generated live from Si Her DeFi records." : ""}{" "}
-          <a href="https://si3.space" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#7c2ae8] hover:underline">
-            About Si Her DeFi ↗
+          <a href="https://si3.space" target="_blank" rel="noopener noreferrer" className="link-cta font-medium text-[#7c2ae8]">
+            About Si Her DeFi <Arrow dir="up-right" />
           </a>
         </p>
       </main>
