@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-
 import OnboardingShell, {
   ClockIcon,
   GiftIcon,
@@ -8,6 +7,7 @@ import OnboardingShell, {
   UserHeaderAction,
   WalletIcon,
 } from "@/components/onboarding-shell";
+import { Arrow } from "@/components/ui/Arrow";
 import ConnectWalletForm from "./connect-wallet-form";
 
 export const metadata: Metadata = {
@@ -45,15 +45,14 @@ export default function WalletPage() {
       highlights={walletHighlights}
     >
       <div className="w-full space-y-4">
-        {/* Back to the previous step — the profile form re-opens with what was saved */}
         <Link
           href="/profile"
-          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#7c2ae8] transition-colors hover:underline"
+          className="link-cta inline-flex items-center gap-1.5 text-[12px] font-medium text-[#7c2ae8]"
         >
-          ← Back to profile
+          <Arrow dir="left" /> Back to profile
         </Link>
         <div>
-          <h1 className="text-[24px] font-bold tracking-tight text-[#171730]">
+          <h1 className="text-[22px] sm:text-[24px] font-medium tracking-tight text-[#171730]">
             Connect your wallet
           </h1>
           <p className="mt-1.5 text-[13px] leading-relaxed text-[#5f5f7a]">

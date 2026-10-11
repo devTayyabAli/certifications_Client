@@ -15,10 +15,12 @@ import {
   useWallet,
 } from "@/components/wallet-provider";
 import { useAppKit } from "@reown/appkit/react";
-import { toHex } from "viem";
 import { useAccount, useSignMessage } from "wagmi";
+import { toHex } from "viem";
 import WalletQrModal from "@/components/wallet-qr-modal";
 import { walletApi, profileApi, isAuthenticated } from "@/lib/api";
+import { ButtonLink } from "@/components/ui/Button";
+import { Arrow } from "@/components/ui/Arrow";
 
 // ---------------------------------------------------------------------------
 // Types & constants
@@ -607,29 +609,22 @@ export default function ConnectWalletForm() {
           href={`https://basescan.org/address/${effectiveWalletState.address}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl border border-[#e2e2ec] px-4 py-2.5 text-[12.5px] font-semibold text-[#5f5f7a] transition hover:bg-gray-50 hover:text-[#171730]"
+          className="flex items-center justify-center gap-2 rounded-xl border border-[#e2e2ec] px-4 py-2.5 text-[12.5px] font-medium text-[#5f5f7a] transition hover:bg-gray-50 hover:text-[#171730]"
         >
           <span className="size-2 rounded-full bg-[#0052ff]" />
-          View on BaseScan ↗
+          <span>View on BaseScan</span>
+          <Arrow dir="up-right" />
         </a>
 
         {/* Continue CTA — only once the backend has the wallet on record */}
         {isLinked ? (
-          <Link
-            href="/dashboard"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#501c9c] via-[#6d25d6] to-[#983cf4] px-4 py-3.5 text-[14.5px] font-semibold text-white shadow-md shadow-purple-950/20 transition hover:brightness-105 active:scale-[0.99]"
-          >
+          <ButtonLink href="/dashboard">
             Go to my dashboard
-            <span aria-hidden="true">→</span>
-          </Link>
+          </ButtonLink>
         ) : (
-          <span
-            aria-disabled="true"
-            className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#501c9c] via-[#6d25d6] to-[#983cf4] px-4 py-3.5 text-[14.5px] font-semibold text-white opacity-50"
-          >
+          <ButtonLink href="/dashboard" disabled>
             Go to my dashboard
-            <span aria-hidden="true">→</span>
-          </span>
+          </ButtonLink>
         )}
 
         <button
@@ -765,8 +760,8 @@ export default function ConnectWalletForm() {
                   <p className="text-[13.5px] font-semibold text-[#5f5f7a] group-hover:text-[#171730] transition">
                     {opt.name}
                   </p>
-                  <p className="text-[11px] text-[#9ca3af]">
-                    Not installed — click to get it ↗
+                  <p className="text-[11px] text-[#9ca3af] inline-flex items-center gap-1">
+                    Not installed — click to get it <Arrow dir="up-right" />
                   </p>
                 </div>
               </a>

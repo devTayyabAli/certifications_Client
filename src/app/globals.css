@@ -27,7 +27,7 @@
   --color-muted: var(--muted);
   --color-placeholder: var(--placeholder);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-geist-sans);
 }
 
 body {
@@ -35,3 +35,405 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
+
+/* ══ Label input ═══════════════════════════════════════════
+   From Bencho (bencho.dev/licence, MIT) — src/components/ui/LabelInput.tsx.
+
+   Bencho's tokens, mapped to this project:
+     --font-ui  → the app's UI font (Geist)
+     --ink      → the brand purple: focused outline is drawn in brand
+     --ink-rgb  → the app's ink (#171730) as bare numbers
+     --ink-3    → muted text, the lifted label at rest
+     --ink-4    → placeholder grey, the label sitting in the field
+     --fill-on  → foreground ink, for typed text and the focused label */
+.lbi {
+  --font-ui: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --ink: var(--brand);
+  --ink-rgb: 23, 23, 48;
+  --ink-3: var(--muted);
+  --ink-4: var(--placeholder);
+  --fill-on: var(--foreground);
+
+  position: relative;
+  font-family: var(--font-ui);
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding-top: 10px;
+}
+
+.lbi-box {
+  position: relative;
+  background: transparent;
+  cursor: text;
+}
+
+.lbi-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lbi-ring path {
+  fill: none;
+  stroke: rgba(var(--ink-rgb), 0.18);
+  stroke-width: 1;
+  stroke-linecap: butt;
+  transition: stroke 240ms ease, stroke-width 240ms ease;
+}
+
+.lbi[data-focus="true"] .lbi-ring path {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.lbi[data-filled="true"]:not([data-focus="true"]) .lbi-ring path {
+  stroke: rgba(var(--ink-rgb), 0.3);
+}
+
+.lbi[data-invalid="true"] .lbi-ring path { stroke: #f87171; }
+.lbi[data-invalid="true"] .lbi-label { color: #ef4444; }
+.lbi[data-disabled="true"] { opacity: 0.6; }
+
+.lbi-gap {
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 0;
+  transition: stroke 240ms ease, stroke-width 240ms ease,
+    stroke-dashoffset 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lbi[data-up="true"] .lbi-gap { stroke-dashoffset: -1; }
+
+.lbi-label {
+  position: absolute;
+  left: var(--lbi-x);
+  top: var(--lbi-rest, 50%);
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  white-space: pre;
+  color: var(--ink-4);
+  transform-origin: left center;
+  transform: translateY(-50%);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms ease;
+  z-index: 1;
+  cursor: text;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.lbi[data-up="true"] .lbi-label {
+  transform: translateY(-50%) translateY(calc(var(--lbi-lift, 26px) * -1)) scale(0.78);
+  color: var(--ink-3);
+}
+
+.lbi[data-focus="true"] .lbi-label { color: var(--fill-on, var(--ink)); }
+.lbi-label span { display: inline-block; }
+
+.lbi[data-focus="true"] .lbi-label span {
+  animation: lbi-hop 460ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  animation-delay: calc(var(--i) * 24ms);
+}
+
+.lbi-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0 0 0 var(--lbi-x);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+  color: var(--fill-on, var(--ink));
+  outline: none;
+}
+
+.lbi-field::placeholder { color: var(--ink-4); opacity: 0; transition: opacity 160ms ease; }
+.lbi[data-focus="true"] .lbi-field::placeholder { opacity: 1; }
+
+.lbi-field:is(textarea) {
+  padding-top: 14px;
+  padding-bottom: 12px;
+  line-height: 20px;
+  resize: none;
+}
+
+.lbi-adorn {
+  position: absolute;
+  z-index: 1;
+  right: 12px;
+  top: var(--lbi-rest, 50%);
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+.lbi[data-focus="true"] .lbi-adorn { opacity: 0; }
+
+.lbi-field:-webkit-autofill,
+.lbi-field:-webkit-autofill:hover,
+.lbi-field:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--lbi-fill, #fff) inset;
+  -webkit-text-fill-color: var(--fill-on);
+  caret-color: var(--fill-on);
+  transition: background-color 9999s ease-out 0s;
+  animation-name: lbi-autofill;
+  animation-duration: 1ms;
+}
+
+@keyframes lbi-autofill { from { opacity: 1; } to { opacity: 1; } }
+
+.lbi-field[data-flip="1"] { animation: lbi-flip-a 260ms ease-out; }
+.lbi-field[data-flip="0"] { animation: lbi-flip-b 260ms ease-out; }
+
+.lbi-eye {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  margin-top: -15px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-4);
+  cursor: pointer;
+  transition: color 160ms ease, scale 130ms cubic-bezier(0.3, 0.9, 0.4, 1);
+}
+
+.lbi-eye:hover { color: var(--fill-on, var(--ink)); }
+.lbi-eye:active { scale: 0.9; }
+
+.lbi-eye svg {
+  grid-area: 1 / 1;
+  transition: opacity 200ms ease, scale 260ms cubic-bezier(0.22, 1, 0.36, 1), filter 200ms ease;
+}
+
+.lbi-eye svg:last-child { opacity: 0; scale: 0.7; filter: blur(2px); }
+.lbi-eye[data-show="true"] svg:first-child { opacity: 0; scale: 0.7; filter: blur(2px); }
+.lbi-eye[data-show="true"] svg:last-child { opacity: 1; scale: 1; filter: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lbi-ring path,
+  .lbi-gap,
+  .lbi-label { transition-duration: 1ms; }
+  .lbi[data-focus="true"] .lbi-label span,
+  .lbi-field { animation: none; }
+}
+
+@keyframes lbi-hop {
+  0% { transform: translateY(0); }
+  38% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes lbi-flip-a { from { filter: blur(3px); opacity: 0.5; } }
+@keyframes lbi-flip-b { from { filter: blur(3px); opacity: 0.5; } }
+
+/* ══ Button · Primary ══════════════════════════════════════
+   Figma "Button · Primary" (node 1025:32).
+   Dark inner shadow under lilac inner glow (#DCC2F2). */
+.btn-primary {
+  --btn-inner: inset 0 0 6px rgba(0, 0, 0, 0.3), inset 0 0 4px #dcc2f2;
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 14px;
+  background: #7733b4;
+  color: #fff;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: var(--btn-inner);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 120ms ease;
+}
+
+@media (hover: hover) {
+  .btn-primary:not(:disabled):not([aria-busy="true"]):hover {
+    background: #8341c4;
+    box-shadow: 0 6px 18px rgba(119, 51, 180, 0.35), inset 0 0 6px rgba(0, 0, 0, 0.22), inset 0 0 6px #dcc2f2;
+  }
+}
+
+.btn-primary:not(:disabled):not([aria-busy="true"]):active {
+  background: #6a2aa3;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.45), inset 0 0 3px rgba(220, 194, 242, 0.7);
+  transform: scale(0.99);
+}
+
+.btn-primary:focus-visible {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #b98be8, var(--btn-inner);
+}
+
+.btn-primary:disabled:not([aria-busy="true"]) {
+  background: #ece4f7;
+  color: #a894c8;
+  box-shadow: inset 0 0 6px rgba(119, 51, 180, 0.08), inset 0 0 4px rgba(255, 255, 255, 0.9);
+  cursor: not-allowed;
+}
+
+.btn-primary[aria-busy="true"] { cursor: progress; }
+
+.btn-primary__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: url('/siherdefi/v2/arrow-right.svg') center / contain no-repeat;
+  mask: url('/siherdefi/v2/arrow-right.svg') center / contain no-repeat;
+}
+
+.btn-primary__spinner {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  flex-shrink: 0;
+  animation: btn-spin 0.8s linear infinite;
+}
+
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary { transition-duration: 1ms; }
+  .btn-primary__spinner { animation-duration: 2.4s; }
+}
+
+/* ══ Button · White ════════════════════════════════════════
+   Figma "Button · White" (node 1027:731) */
+.btn-white {
+  --btn-inner: inset 0 0 6px rgba(0, 0, 0, 0.1), inset 0 0 4px #dcc2f2;
+  background: #fff;
+  color: #151534;
+}
+
+@media (hover: hover) {
+  .btn-white:not(:disabled):not([aria-busy="true"]):hover {
+    background: #f8f3fe;
+    box-shadow: 0 6px 18px rgba(220, 194, 242, 0.45), inset 0 0 6px rgba(0, 0, 0, 0.06), inset 0 0 6px #dcc2f2;
+  }
+}
+
+.btn-white:not(:disabled):not([aria-busy="true"]):active {
+  background: #eee4fa;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.18), inset 0 0 3px rgba(220, 194, 242, 0.7);
+}
+
+.btn-white:focus-visible {
+  box-shadow: 0 0 0 3px #b98be8, var(--btn-inner);
+}
+
+.btn-white:disabled:not([aria-busy="true"]) {
+  background: #eeeaf4;
+  color: #a39db8;
+  box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+.btn-white .btn-primary__spinner { color: #7733b4; }
+
+.btn-md {
+  width: auto;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.btn-md .btn-primary__icon { width: 18px; height: 18px; }
+
+.btn-primary.btn-disabled {
+  background: #ece4f7;
+  color: #a894c8;
+  box-shadow: inset 0 0 6px rgba(119, 51, 180, 0.08), inset 0 0 4px rgba(255, 255, 255, 0.9);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-white.btn-disabled {
+  background: #eeeaf4;
+  color: #a39db8;
+  box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+a.btn-primary { text-decoration: none; }
+
+/* ══ Inline arrow ═════════════════════════════════════════ */
+.inline-arrow {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  vertical-align: -0.22em;
+  background: currentColor;
+  -webkit-mask: url('/siherdefi/v2/arrow-right.svg') center / contain no-repeat;
+  mask: url('/siherdefi/v2/arrow-right.svg') center / contain no-repeat;
+}
+.inline-arrow[data-dir="left"] { transform: rotate(180deg); }
+.inline-arrow[data-dir="up-right"] { transform: rotate(-45deg); }
+
+/* ── Sidebar item (Figma "Sidebar item" 1040:37) ───────────── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #5f5f7a;
+  outline: none;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.nav-item > svg { flex-shrink: 0; }
+.nav-item__lock { margin-left: auto; display: flex; }
+@media (hover: hover) {
+  .nav-item:not(.nav-item--selected):not(.nav-item--locked):hover { background: rgba(243, 232, 252, 0.6); color: #4a1d82; }
+}
+.nav-item:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #b98be8; }
+.nav-item--selected {
+  background: #7733b4;
+  color: #fff;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3), inset 0 0 4px #dcc2f2;
+}
+.nav-item--selected:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #b98be8, inset 0 0 6px rgba(0, 0, 0, 0.3), inset 0 0 4px #dcc2f2; }
+.nav-item--locked { color: #a894c8; cursor: not-allowed; }
+
+/* ── Text CTA (Back to dashboard, Review, Connect …) ───────── */
+.link-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline: -8px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+@media (hover: hover) { .link-cta:hover { background: #f3ebff; text-decoration: none; } }
+.link-cta:active { background: #ead9fd; }
+.link-cta:focus-visible { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #b98be8; }
+.link-cta:disabled { background: transparent; }
+
+/* external ButtonLink: the arrow points up-right */
+.btn-primary__icon--out { rotate: -45deg; }

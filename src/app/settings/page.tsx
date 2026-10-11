@@ -1,337 +1,500 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import DashboardSidebar from "@/components/dashboard-sidebar";
-import { useProfile } from "@/components/profile-provider";
-import { useWallet } from "@/components/wallet-provider";
-import { assetPath } from "@/lib/constants";
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { AppShell, Avatar } from '@/components/app/AppShell';
+import { useProfile } from '@/components/profile-provider';
+import { useWallet } from '@/components/wallet-provider';
+import { Button } from '@/components/ui/Button';
+import { LabelInput } from '@/components/ui/LabelInput';
+import { Arrow } from '@/components/ui/Arrow';
+import { toDataUrl } from '@/lib/image';
 import {
   profileApi,
   walletApi,
   settingsApi,
   isAuthenticated,
-} from "@/lib/api";
+  type UserSettings,
+} from '@/lib/api';
+
+const section =
+  'rounded-2xl border border-[#ececf2] bg-white p-6 shadow-[0_2px_12px_rgba(23,23,48,0.03)]';
+
+function Toggle({
+  on,
+  onChange,
+  disabled,
+}: {
+  on: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={() => onChange(!on)}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50 ${
+        on ? 'bg-[#7c2ae8]' : 'bg-[#e2e2ec]'
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+          on ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  );
+}
+
+type Field = 'name' | 'role' | 'organization' | 'socialLink' | 'bio';
+
+const FIELDS: {
+  key: Exclude<Field, 'bio'>;
+  label: string;
+  placeholder: string;
+  type?: 'text' | 'url';
+  autoComplete?: string;
+}[] = [
+  { key: 'name', label: 'Your name', placeholder: 'Firstname Lastname', autoComplete: 'name' },
+  {
+    key: 'role',
+    label: 'Professional role (optional)',
+    placeholder: 'Engineer, Writer, etc.',
+    autoComplete: 'organization-title',
+  },
+  {
+    key: 'organization',
+    label: 'Organization (optional)',
+    placeholder: 'Name of your organization',
+    autoComplete: 'organization',
+  },
+  {
+    key: 'socialLink',
+    label: 'Social link (optional)',
+    placeholder: 'https://linkedin.com/in/your-username',
+    type: 'url',
+    autoComplete: 'url',
+  },
+];
+
+const pick = (p: {
+  name?: string;
+  role?: string;
+  organization?: string;
+  socialLink?: string;
+  bio?: string;
+} | null) => ({
+  name: p?.name ?? '',
+  role: p?.role ?? '',
+  organization: p?.organization ?? '',
+  socialLink: p?.socialLink ?? '',
+  bio: p?.bio ?? '',
+});
+
+/** Profile details edited in place: same floating-label fields as onboarding, saved without leaving Settings. */
+function ProfileForm({
+  profile,
+  onSaved,
+}: {
+  profile: {
+    name: string;
+    role: string;
+    organization: string;
+    socialLink: string;
+    bio: string;
+    photoUrl: string | null;
+  };
+  onSaved: (updates: {
+    name: string;
+    role: string;
+    organization: string;
+    socialLink: string;
+    bio: string;
+    photoUrl: string | null;
+  }) => void;
+}) {
+  const [values, setValues] = useState(pick(profile));
+  const [photo, setPhoto] = useState(profile?.photoUrl ?? '');
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const file = useRef<HTMLInputElement>(null);
+
+  // load once the profile has loaded
+  const loaded = useRef(false);
+  useEffect(() => {
+    if (profile && !loaded.current && profile.name) {
+      loaded.current = true;
+      setValues(pick(profile));
+      setPhoto(profile.photoUrl ?? '');
+    }
+  }, [profile]);
+
+  const original = pick(profile);
+  const dirty =
+    (Object.keys(values) as Field[]).some((k) => values[k] !== original[k]) ||
+    photo !== (profile?.photoUrl ?? '');
+
+  const set = (k: Field, v: string) => {
+    setValues((prev) => ({ ...prev, [k]: v }));
+    setSaved(false);
+    if (k === 'name' && nameError) setNameError(null);
+  };
+
+  const choose = async (f?: File) => {
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) {
+      setError('That photo is over 5 MB. Try a smaller one.');
+      return;
+    }
+    setError(null);
+    setSaved(false);
+    try {
+      const dataUrl = await toDataUrl(f);
+      setPhoto(dataUrl);
+    } catch {
+      setError('Could not process this image. Try another file.');
+    }
+  };
+
+  const reset = () => {
+    setValues(original);
+    setPhoto(profile?.photoUrl ?? '');
+    setNameError(null);
+    setError(null);
+  };
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!values.name.trim()) {
+      setNameError('Add your name — it’s the one printed on your certificate.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await profileApi.updateProfile({
+        name: values.name.trim(),
+        role: values.role.trim(),
+        organization: values.organization.trim(),
+        socialLink: values.socialLink.trim(),
+        bio: values.bio.trim(),
+        photoUrl: photo || null,
+      });
+      onSaved({
+        name: values.name.trim(),
+        role: values.role.trim(),
+        organization: values.organization.trim(),
+        socialLink: values.socialLink.trim(),
+        bio: values.bio.trim(),
+        photoUrl: photo || null,
+      });
+      setSaved(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not save profile changes.';
+      setError(msg);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form noValidate onSubmit={save} className="space-y-5">
+      <input
+        ref={file}
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        type="file"
+        onChange={(e) => {
+          choose(e.target.files?.[0]);
+          e.target.value = '';
+        }}
+      />
+      <div className="flex items-center gap-4">
+        <Avatar src={photo} name={values.name} className="size-16 shadow-xs" />
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => file.current?.click()}
+              className="rounded-lg bg-[#f2e8ff] px-3 py-1 text-[12px] font-medium text-[#7c2ae8] transition-colors hover:bg-[#ead5ff] cursor-pointer"
+            >
+              {photo ? 'Replace photo' : 'Upload a photo'}
+            </button>
+            {photo && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPhoto('');
+                  setSaved(false);
+                }}
+                className="rounded-lg px-2 py-1 text-[12px] text-[#8e8ea6] transition-colors hover:text-[#5f5f7a] cursor-pointer"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-[#8e8ea6]">
+            JPG, PNG or WebP · up to 5 MB · shown on your certificate
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {FIELDS.map((f) => (
+          <div key={f.key}>
+            <LabelInput
+              id={`settings-${f.key}`}
+              name={f.key}
+              label={f.label}
+              type={f.type ?? 'text'}
+              corner={12}
+              height={48}
+              placeholder={f.placeholder}
+              autoComplete={f.autoComplete}
+              value={values[f.key]}
+              disabled={busy}
+              invalid={f.key === 'name' && !!nameError}
+              describedBy={f.key === 'name' && nameError ? 'settings-name-error' : undefined}
+              onChange={(v) => set(f.key, v)}
+            />
+            {f.key === 'name' && nameError && (
+              <p id="settings-name-error" role="alert" className="mt-1.5 text-[12px] text-red-500">
+                {nameError}
+              </p>
+            )}
+          </div>
+        ))}
+        <div className="sm:col-span-2">
+          <LabelInput
+            id="settings-bio"
+            name="bio"
+            label="Bio (optional)"
+            multiline
+            height={96}
+            corner={12}
+            maxLength={300}
+            placeholder="A line about you and what you're building"
+            value={values.bio}
+            disabled={busy}
+            onChange={(v) => set('bio', v)}
+          />
+          <p className="mt-1 text-right text-[11px] text-[#8e8ea6]">Max 300 characters</p>
+        </div>
+      </div>
+      {error && (
+        <p role="alert" className="text-[12px] text-red-500">
+          {error}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[#f0f0f5] pt-4">
+        {saved && !dirty && <span className="mr-auto text-[12px] text-[#16a34a]">Profile saved</span>}
+        {dirty && !busy && (
+          <button
+            type="button"
+            onClick={reset}
+            className="rounded-lg px-3 py-2 text-[12.5px] font-medium text-[#5f5f7a] transition-colors hover:text-[#171730] cursor-pointer"
+          >
+            Cancel
+          </button>
+        )}
+        <Button
+          type="submit"
+          size="md"
+          showIcon={false}
+          loading={busy}
+          loadingLabel="Saving"
+          disabled={!dirty}
+        >
+          Save changes
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { profile, saveProfile } = useProfile();
-  const { wallet, isOnBase, openModal, disconnect, saveWallet } = useWallet();
+  const { wallet, disconnect, openAppKit } = useWallet();
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [saving, setSaving] = useState<keyof UserSettings | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [onChainPrivacy, setOnChainPrivacy] = useState(true);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
-
-  // Protect route & sync profile, wallet, and settings from MongoDB backend
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     if (!isAuthenticated()) {
-      router.replace("/login");
+      router.replace('/login');
       return;
     }
 
-    let isMounted = true;
+    settingsApi
+      .getSettings()
+      .then(setSettings)
+      .catch(() => {});
+  }, [router]);
 
-    async function loadSettingsData() {
-      try {
-        const [profileRes, walletRes, settingsRes] = await Promise.allSettled([
-          profileApi.getProfile(),
-          walletApi.getStatus(),
-          settingsApi.getSettings(),
-        ]);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(t);
+  }, [toast]);
 
-        if (!isMounted) return;
-
-        // Sync Profile
-        if (profileRes.status === "fulfilled" && profileRes.value) {
-          const p = profileRes.value;
-          saveProfile({
-            name: p.name || "",
-            role: p.role || "",
-            organization: p.organization || "",
-            socialLink: p.socialLink || "",
-            bio: p.bio || "",
-            photoUrl: p.photoUrl !== undefined ? p.photoUrl : null,
-          });
-        }
-
-        // Sync Wallet
-        if (
-          walletRes.status === "fulfilled" &&
-          walletRes.value?.connected &&
-          walletRes.value?.address
-        ) {
-          saveWallet({
-            address: walletRes.value.address,
-            chainId: walletRes.value.chainId || "0x2105",
-          });
-        }
-
-        // Sync Settings
-        if (settingsRes.status === "fulfilled" && settingsRes.value) {
-          setEmailNotifications(settingsRes.value.emailNotifications);
-          setOnChainPrivacy(settingsRes.value.onChainVerificationPrivacy);
-        }
-      } catch (err) {
-        console.warn("Could not load settings data from backend:", err);
-      }
-    }
-
-    loadSettingsData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [router, saveProfile, saveWallet]);
-
-  const handleToggleSetting = async (
-    key: "emailNotifications" | "onChainVerificationPrivacy",
-    nextValue: boolean,
-  ) => {
-    if (key === "emailNotifications") setEmailNotifications(nextValue);
-    if (key === "onChainVerificationPrivacy") setOnChainPrivacy(nextValue);
-
-    setIsSavingSettings(true);
+  const update = async (k: keyof UserSettings, v: boolean) => {
+    if (!settings) return;
+    const prev = { ...settings };
+    setSettings({ ...settings, [k]: v });
+    setSaving(k);
     try {
-      await settingsApi.updateSettings({ [key]: nextValue });
-      showToast(
-        key === "emailNotifications"
-          ? nextValue
-            ? "Email notifications turned on"
-            : "Email notifications turned off"
-          : nextValue
-            ? "On-chain verification privacy enabled"
-            : "On-chain verification privacy disabled",
-      );
-    } catch (err) {
-      console.warn("Failed to update setting:", err);
-      // Revert on error
-      if (key === "emailNotifications") setEmailNotifications(!nextValue);
-      if (key === "onChainVerificationPrivacy") setOnChainPrivacy(!nextValue);
-      showToast("Failed to save setting to backend");
+      const updated = await settingsApi.updateSettings({ [k]: v });
+      setSettings(updated);
+      setToast('Preferences saved');
+    } catch {
+      setSettings(prev);
+      setToast('Failed to save preference');
     } finally {
-      setIsSavingSettings(false);
+      setSaving(null);
     }
   };
 
-  const handleDisconnectWallet = async () => {
-    setIsDisconnecting(true);
+  const handleDisconnect = async () => {
+    setBusy(true);
     try {
       await walletApi.disconnect();
       disconnect();
-      showToast("Wallet disconnected successfully");
-    } catch (err) {
-      console.warn("Failed to disconnect wallet on backend:", err);
+      setToast('Wallet disconnected successfully');
+    } catch {
       disconnect();
-      showToast("Wallet disconnected locally");
+      setToast('Wallet disconnected locally');
     } finally {
-      setIsDisconnecting(false);
+      setBusy(false);
     }
   };
 
-  const avatarSrc = profile.photoUrl || assetPath("/ada-portrait.jpg");
-
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-[#f8f8fc] font-sans antialiased text-[#171730]">
-      {/* Toast alert */}
-      {toastMessage && (
-        <div className="fixed top-5 right-5 z-60 rounded-xl bg-[#171730] px-4 py-2.5 text-[12.5px] font-medium text-white shadow-xl animate-in fade-in slide-in-from-top-3">
-          {toastMessage}
-        </div>
-      )}
-
-      <DashboardSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((c) => !c)}
-      />
-
-      <main className="flex-1 px-4 py-6 sm:px-8 lg:px-14 sm:py-8 overflow-y-auto">
-        <div className="mx-auto max-w-4xl space-y-8">
-          {/* Header */}
-          <div>
-            <h1 className="text-[24px] font-bold tracking-tight text-[#171730]">
-              Settings
-            </h1>
-            <p className="mt-1 text-[13px] text-[#5f5f7a]">
-              Manage your cohort profile, connected wallet, and platform preferences.
-            </p>
+    <AppShell>
+      <div className="mx-auto max-w-4xl space-y-8">
+        {toast && (
+          <div className="fixed top-5 right-5 z-60 rounded-xl bg-[#171730] px-4 py-2.5 text-[12.5px] font-medium text-white shadow-xl animate-in fade-in slide-in-from-top-3">
+            {toast}
           </div>
+        )}
+        <div>
+          <h1 className="text-[24px] font-medium tracking-tight text-[#171730]">Settings</h1>
+          <p className="mt-1 text-[13px] text-[#5f5f7a]">
+            Manage your cohort profile, connected wallet, and platform preferences.
+          </p>
+        </div>
 
-          {/* Profile Section */}
-          <section className="rounded-2xl border border-[#ececf2] bg-white p-6 shadow-[0_2px_12px_rgba(23,23,48,0.03)] space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <section id="profile" className={`${section} scroll-mt-6 space-y-5`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-[16px] font-medium text-[#171730]">Profile information</h2>
+              <p className="text-[12px] text-[#8e8ea6]">
+                This is how your credentials appear on your on-chain certificate.
+              </p>
+            </div>
+            <span className="self-start rounded-full bg-[#f6f6fa] px-2.5 py-1 text-[11.5px] text-[#5f5f7a]">
+              Cohort 01 · Si Her DeFi
+            </span>
+          </div>
+          <ProfileForm
+            profile={profile}
+            onSaved={(updates) => {
+              saveProfile(updates);
+              setToast('Profile updated successfully');
+            }}
+          />
+        </section>
+
+        <section className={`${section} space-y-4`}>
+          <h2 className="text-[16px] font-medium text-[#171730]">Connected wallet</h2>
+          <p className="text-[12px] text-[#8e8ea6]">
+            Your on-chain certificate will be minted to this address on Base Mainnet.
+          </p>
+          {wallet ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-[#f9f9fc] border border-[#e4e4ed]">
+              <div className="flex items-center gap-3">
+                <span className="size-3 shrink-0 rounded-full bg-[#0052ff]" />
+                <div>
+                  <p className="tabular-nums text-[13px] font-medium text-[#171730] break-all sm:break-normal">
+                    {wallet.address}
+                  </p>
+                  <p className="text-[11px] text-[#8e8ea6]">Base Mainnet</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={`https://basescan.org/address/${wallet.address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-[#e2e2ec] bg-white px-3 py-1.5 text-[11.5px] font-medium text-[#5f5f7a] hover:bg-gray-50 transition inline-flex items-center gap-1.5"
+                >
+                  <span>View on BaseScan</span>
+                  <Arrow dir="up-right" />
+                </a>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={handleDisconnect}
+                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11.5px] font-medium text-red-600 hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
+                >
+                  {busy ? 'Disconnecting…' : 'Disconnect'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-4 rounded-xl bg-[#f9f9fc] border border-[#e4e4ed]">
               <div>
-                <h2 className="text-[16px] font-bold text-[#171730]">Profile Information</h2>
-                <p className="text-[12px] text-[#8e8ea6]">
-                  This is how your credentials appear on your on-chain certificate.
+                <p className="text-[13px] font-medium text-[#171730]">No wallet connected</p>
+                <p className="text-[11px] text-[#8e8ea6]">
+                  Connect a wallet to receive your certificate.
                 </p>
               </div>
-              <Link
-                href="/profile?from=dashboard"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#501c9c] via-[#6d25d6] to-[#983cf4] px-4 py-2 text-[12.5px] font-semibold text-white shadow-sm hover:brightness-105 transition"
-              >
-                <span>Edit profile</span>
-                <span>→</span>
-              </Link>
+              <Button size="md" onClick={() => (openAppKit ? openAppKit() : router.push('/wallet'))}>
+                Connect wallet
+              </Button>
             </div>
+          )}
+        </section>
 
-            <div className="flex items-center gap-4 pt-2">
-              <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-black/10 shadow-xs">
-                <Image
-                  src={avatarSrc}
-                  alt={profile.name || "Member avatar"}
-                  fill
-                  unoptimized
-                  sizes="64px"
-                  className="object-cover"
-                />
-              </div>
+        <section className={`${section} space-y-4`}>
+          <h2 className="text-[16px] font-medium text-[#171730]">Account preferences</h2>
+          <div className="divide-y divide-[#f0f0f5] text-[13px]">
+            <div className="py-3.5 flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-[16px] font-bold text-[#171730]">{profile.name}</h3>
-                <p className="text-[12.5px] font-medium text-[#7c2ae8]">{profile.role}</p>
-                <p className="text-[12px] text-[#8e8ea6] mt-0.5">{profile.organization}</p>
+                <p className="font-medium text-[#171730]">Email notifications</p>
+                <p className="text-[11px] text-[#8e8ea6]">
+                  Get updates when new modules, live sessions, and materials are published.
+                </p>
               </div>
+              <Toggle
+                on={!!settings?.emailNotifications}
+                disabled={!settings || saving === 'emailNotifications'}
+                onChange={(v) => update('emailNotifications', v)}
+              />
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-[12.5px]">
-              <div className="p-3 rounded-xl bg-[#f9f9fc] border border-[#ececf2]">
-                <span className="text-[#8e8ea6] block text-[11px] font-medium uppercase tracking-wider">
-                  Social Profile
-                </span>
-                <span className="text-[#171730] font-medium truncate block mt-0.5">
-                  {profile.socialLink || "Not specified"}
-                </span>
+            <div className="py-3.5 flex items-center justify-between gap-4">
+              <div>
+                <p className="font-medium text-[#171730]">On-chain verification privacy</p>
+                <p className="text-[11px] text-[#8e8ea6]">
+                  Display your full name publicly on the Base certificate registry &amp; verification
+                  page.
+                </p>
               </div>
-              <div className="p-3 rounded-xl bg-[#f9f9fc] border border-[#ececf2]">
-                <span className="text-[#8e8ea6] block text-[11px] font-medium uppercase tracking-wider">
-                  Cohort
-                </span>
-                <span className="text-[#171730] font-medium block mt-0.5">
-                  Cohort 01 — Si Her DeFi
-                </span>
-              </div>
+              <Toggle
+                on={!!settings?.onChainVerificationPrivacy}
+                disabled={!settings || saving === 'onChainVerificationPrivacy'}
+                onChange={(v) => update('onChainVerificationPrivacy', v)}
+              />
             </div>
-          </section>
-
-          {/* Wallet Section */}
-          <section className="rounded-2xl border border-[#ececf2] bg-white p-6 shadow-[0_2px_12px_rgba(23,23,48,0.03)] space-y-4">
-            <h2 className="text-[16px] font-bold text-[#171730]">Connected Wallet</h2>
-            <p className="text-[12px] text-[#8e8ea6]">
-              Your on-chain certificate will be minted to this address on Base Mainnet.
-            </p>
-
-            {wallet ? (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-[#f9f9fc] border border-[#e4e4ed]">
-                <div className="flex items-center gap-3">
-                  <span className={`size-3 rounded-full ${isOnBase ? "bg-[#0052ff]" : "bg-amber-400"}`} />
-                  <div>
-                    <p className="font-mono text-[13px] font-semibold text-[#171730] break-all sm:break-normal">
-                      {wallet.address}
-                    </p>
-                    <p className="text-[11px] text-[#8e8ea6]">Base Mainnet</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={`https://basescan.org/address/${wallet.address}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-lg border border-[#e2e2ec] bg-white px-3 py-1.5 text-[11.5px] font-semibold text-[#5f5f7a] hover:bg-gray-50 transition"
-                  >
-                    View on BaseScan ↗
-                  </a>
-                  <button
-                    type="button"
-                    disabled={isDisconnecting}
-                    onClick={handleDisconnectWallet}
-                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11.5px] font-semibold text-red-600 hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
-                  >
-                    {isDisconnecting ? "Disconnecting…" : "Disconnect"}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between p-4 rounded-xl bg-[#f9f9fc] border border-[#e4e4ed]">
-                <div>
-                  <p className="text-[13px] font-semibold text-[#171730]">No wallet connected</p>
-                  <p className="text-[11px] text-[#8e8ea6]">Connect a wallet to receive your certificate.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={openModal}
-                  className="rounded-xl bg-[#7c2ae8] text-white px-4 py-2 text-[12px] font-semibold hover:bg-[#6a22c9] transition cursor-pointer"
-                >
-                  Connect wallet
-                </button>
-              </div>
-            )}
-          </section>
-
-          {/* Preferences */}
-          <section className="rounded-2xl border border-[#ececf2] bg-white p-6 shadow-[0_2px_12px_rgba(23,23,48,0.03)] space-y-4">
-            <h2 className="text-[16px] font-bold text-[#171730]">Account Preferences</h2>
-            <div className="divide-y divide-[#f0f0f5] text-[13px]">
-              {/* Email Notifications Toggle */}
-              <div className="py-3.5 flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-[#171730]">Email notifications</p>
-                  <p className="text-[11px] text-[#8e8ea6]">Get updates when new modules, live sessions, and materials are published.</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={emailNotifications}
-                  disabled={isSavingSettings}
-                  onClick={() => handleToggleSetting("emailNotifications", !emailNotifications)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                    emailNotifications ? "bg-[#7c2ae8]" : "bg-[#e2e2ec]"
-                  } disabled:opacity-50`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                      emailNotifications ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* On-Chain Privacy Toggle */}
-              <div className="py-3.5 flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-[#171730]">On-chain verification privacy</p>
-                  <p className="text-[11px] text-[#8e8ea6]">Display your full name publicly on the Base certificate registry & verification page.</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={onChainPrivacy}
-                  disabled={isSavingSettings}
-                  onClick={() => handleToggleSetting("onChainVerificationPrivacy", !onChainPrivacy)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                    onChainPrivacy ? "bg-[#7c2ae8]" : "bg-[#e2e2ec]"
-                  } disabled:opacity-50`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                      onChainPrivacy ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
-      </main>
-    </div>
+          </div>
+        </section>
+      </div>
+    </AppShell>
   );
 }

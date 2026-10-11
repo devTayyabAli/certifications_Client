@@ -1,283 +1,101 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import DashboardSidebar from "@/components/dashboard-sidebar";
-import SessionVideo, { isHostedVideo } from "@/components/session-video";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { AppShell } from '@/components/app/AppShell';
+import { Button, ButtonLink } from '@/components/ui/Button';
+import { LabelInput } from '@/components/ui/LabelInput';
+import { Arrow } from '@/components/ui/Arrow';
+import { Check } from '@/components/ui/Check';
+import { IntroVideo, WATCH_THRESHOLD } from '@/components/onboarding/IntroVideo';
+import { tagCase } from '@/lib/format';
 import {
   ApiErrorResponse,
   onboardApi,
   type OnboardContent,
   type OnboardProgress,
   type OnboardSocial,
-} from "@/lib/api";
-import { assetPath } from "@/lib/constants";
+} from '@/lib/api';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+type StepState = 'done' | 'current' | 'todo';
 
-function minutesLabel(minutes: number | null) {
-  if (!minutes) return null;
-  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
-}
+const VIDEO_TITLE = 'A welcome from Kara Howard';
+const VIDEO_DESCRIPTION =
+  'Kara Howard, Co-Founder and Ecosystem Lead at SI<3>, welcomes you to the cohort. She covers what Si Her DeFi is, how the weekly sessions and quizzes work, and how you earn your badges and certificate.';
 
-function formatDate(iso: string | null) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Intro video
-// ---------------------------------------------------------------------------
-
-function IntroVideo({
-  video,
-  watched,
-  onWatched,
-}: {
-  video: OnboardContent["video"];
-  watched: boolean;
-  onWatched: () => void;
-}) {
-  const poster = video.posterUrl ? assetPath(video.posterUrl) : undefined;
-
-  if (!video.url) {
-    return (
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-[#0e0c18] text-white shadow-md">
-        {poster && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={poster} alt="" className="absolute inset-0 size-full object-cover opacity-50" />
-        )}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 px-6 text-center">
-          <span className="text-[11px] font-mono tracking-wider text-white/80 uppercase">
-            {video.caption}
-          </span>
-          <p className="text-[13px] text-white/90">The intro video will appear here soon.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <SessionVideo
-        url={video.url}
-        posterUrl={poster}
-        caption={video.caption}
-        lengthLabel={video.minutes ? `${video.minutes} MIN INTRO` : "INTRO"}
-        onWatched={onWatched}
-      />
-      {/* Hosted embeds can't report progress, so let the learner confirm */}
-      {isHostedVideo(video.url) && !watched && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onWatched}
-            className="text-[11.5px] font-semibold text-[#7c2ae8] hover:underline cursor-pointer"
-          >
-            I’ve watched it ✓
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Socials
-// ---------------------------------------------------------------------------
-
-function SocialIcon({ platform }: { platform: string }) {
-  const base = "grid size-8 shrink-0 place-items-center rounded-lg text-white font-bold text-xs";
-  switch (platform) {
-    case "x":
-    case "twitter":
-      return <span className={`${base} bg-black`}>𝕏</span>;
-    case "linkedin":
-      return <span className={`${base} bg-[#0077b5]`}>in</span>;
-    case "instagram":
-      return <span className={`${base} bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af]`}>IG</span>;
-    case "telegram":
-      return <span className={`${base} bg-[#229ed9]`}>TG</span>;
-    case "youtube":
-      return <span className={`${base} bg-[#ff0000]`}>▶</span>;
-    default:
-      return <span className={`${base} bg-[#7c2ae8]`}>↗</span>;
-  }
-}
-
-function SocialCard({
-  social,
-  followed,
-  onFollow,
-}: {
-  social: OnboardSocial;
-  followed: boolean;
-  onFollow: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#ececf2] bg-white p-3.5 shadow-xs">
-      <div className="flex min-w-0 items-center gap-3">
-        <SocialIcon platform={social.platform} />
-        <div className="min-w-0">
-          <p className="truncate text-[12.5px] font-bold text-[#171730]">{social.label}</p>
-          {social.handle && <p className="truncate text-[11px] text-[#8e8ea6]">{social.handle}</p>}
-        </div>
-      </div>
-      <a
-        href={social.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={onFollow}
-        className={`shrink-0 rounded-full border px-3.5 py-1 text-[11.5px] font-semibold transition cursor-pointer ${
-          followed
-            ? "border-[#bbf7d0] bg-[#f0fdf4] text-[#16a34a]"
-            : "border-[#e2e2ec] text-[#171730] hover:bg-gray-50 hover:border-[#7c2ae8]"
-        }`}
-      >
-        {followed ? "Followed ✓" : "Follow ↗"}
-      </a>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Task rail
-// ---------------------------------------------------------------------------
-
-type TaskState = "done" | "current" | "pending";
-
-function TaskStep({
-  index,
+function Step({
+  n,
   state,
   title,
-  detail,
+  sub,
+  children,
 }: {
-  index: number;
-  state: TaskState;
+  n: number;
+  state: StepState;
   title: string;
-  detail: string | null;
+  sub: string;
+  children?: React.ReactNode;
 }) {
+  const dot =
+    state === 'done'
+      ? 'bg-[#16a34a] text-white'
+      : state === 'current'
+        ? 'bg-[#7c2ae8] text-white'
+        : 'border border-[#dcdce8] text-[#8e8ea6]';
   return (
     <div className="flex items-start gap-3">
       <span
-        className={`grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-bold mt-0.5 ${
-          state === "done"
-            ? "bg-[#16a34a] text-white"
-            : state === "current"
-              ? "bg-[#7c2ae8] text-white"
-              : "border border-[#dcdce8] text-[#8e8ea6]"
-        }`}
+        className={`grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-medium mt-0.5 ${dot}`}
       >
-        {state === "done" ? "✓" : index}
+        {state === 'done' ? <Check className="size-3.5" strokeWidth={2.4} /> : n}
       </span>
-      <div>
-        <p className="text-[13px] font-bold text-[#171730]">{title}</p>
-        {detail && <p className="text-[11px] text-[#8e8ea6]">{detail}</p>}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Modal shell
-// ---------------------------------------------------------------------------
-
-function Modal({
-  labelledBy,
-  onClose,
-  children,
-  className = "max-w-lg",
-}: {
-  labelledBy: string;
-  onClose?: () => void;
-  children: ReactNode;
-  className?: string;
-}) {
-  useEffect(() => {
-    if (!onClose) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        className={`relative w-full rounded-2xl bg-white p-6 sm:p-7 shadow-2xl border border-[#ececf2] animate-in fade-in zoom-in-95 duration-200 ${className}`}
-      >
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-medium text-[#171730]">{title}</p>
+        <p className="text-[11px] text-[#8e8ea6]">{sub}</p>
         {children}
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main view
-// ---------------------------------------------------------------------------
-
-type LoadState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; content: OnboardContent };
-
 export default function OnboardView() {
   const router = useRouter();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const [load, setLoad] = useState<LoadState>({ status: "loading" });
-  const [reloadKey, setReloadKey] = useState(0);
-  const [progressStatus, setProgressStatus] = useState<OnboardProgress["status"]>("not_started");
-  const [completedAt, setCompletedAt] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [followedIds, setFollowedIds] = useState<string[]>([]);
-  const [videoWatched, setVideoWatched] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [content, setContent] = useState<OnboardContent | null>(null);
+  const [progress, setProgress] = useState<OnboardProgress | null>(null);
 
-  const [modal, setModal] = useState<"none" | "questions" | "done">("none");
-  const [questionIndex, setQuestionIndex] = useState(0);
+  const [watchFraction, setWatchFraction] = useState(0);
+  const [questionIndex, setQuestionIndex] = useState<number | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Load the CMS content and this learner's saved progress
-  useEffect(() => {
-    let cancelled = false;
+  const loadData = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     onboardApi
       .getPart1()
-      .then(({ content, progress }) => {
-        if (cancelled) return;
-        setLoad({ status: "ready", content });
-        setProgressStatus(progress.status);
-        setCompletedAt(progress.completedAt);
-        setAnswers(progress.answers);
-        setFollowedIds(progress.followedSocialIds);
-        setVideoWatched(progress.videoWatched);
+      .then(({ content: c, progress: p }) => {
+        setContent(c);
+        setProgress(p);
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
-        setLoad({
-          status: "error",
-          message:
-            err instanceof Error && err.message
-              ? err.message
-              : "We couldn’t load onboarding right now. Please try again.",
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadKey]);
+        setLoadError(
+          err instanceof Error && err.message
+            ? err.message
+            : 'We couldn’t load onboarding right now. Please try again.',
+        );
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
     if (!toast) return;
@@ -285,110 +103,94 @@ export default function OnboardView() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const closeQuestions = useCallback(() => {
-    setModal("none");
-    setModalError(null);
-  }, []);
-
-  if (load.status !== "ready") {
+  if (loading || !content || !progress) {
     return (
-      <PageFrame collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)}>
-        {load.status === "loading" ? (
-          <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="Loading onboarding">
-            <div className="h-5 w-40 rounded bg-[#ececf2]" />
-            <div className="h-8 w-2/3 rounded bg-[#ececf2]" />
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-              <div className="aspect-video rounded-2xl bg-[#ececf2] lg:col-span-8" />
-              <div className="h-80 rounded-2xl bg-[#ececf2] lg:col-span-4" />
+      <AppShell>
+        <div className="mx-auto max-w-5xl space-y-6">
+          {loadError ? (
+            <div className="rounded-2xl border border-[#ececf2] bg-white p-8 text-center shadow-xs">
+              <p className="text-[14px] font-medium text-[#171730]">{loadError}</p>
+              <button
+                type="button"
+                onClick={loadData}
+                className="mt-4 rounded-xl bg-[#171730] px-5 py-2 text-[12.5px] font-medium text-white hover:bg-black cursor-pointer"
+              >
+                Try again
+              </button>
             </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-[#ececf2] bg-white p-8 text-center shadow-xs">
-            <p className="text-[14px] font-semibold text-[#171730]">{load.message}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setLoad({ status: "loading" });
-                setReloadKey((k) => k + 1);
-              }}
-              className="mt-4 rounded-full bg-[#171730] px-5 py-2 text-[12.5px] font-bold text-white hover:bg-black cursor-pointer"
-            >
-              Try again
-            </button>
-          </div>
-        )}
-      </PageFrame>
+          ) : (
+            <div className="space-y-6 animate-pulse" aria-busy="true">
+              <div className="h-5 w-40 rounded bg-[#ececf2]" />
+              <div className="h-8 w-2/3 rounded bg-[#ececf2]" />
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                <div className="aspect-video rounded-2xl bg-[#ececf2] lg:col-span-8" />
+                <div className="h-80 rounded-2xl bg-[#ececf2] lg:col-span-4" />
+              </div>
+            </div>
+          )}
+        </div>
+      </AppShell>
     );
   }
 
-  const { content } = load;
-  const { questions, socials } = content;
-  const isCompleted = progressStatus === "completed";
-  const followed = new Set(followedIds);
+  const socials = [...content.socials].sort((a, b) => a.order - b.order);
+  const questions = [...content.questions].sort((a, b) => a.order - b.order);
   const requiredSocials = socials.filter((s) => s.required);
-  const socialsDone = requiredSocials.every((s) => followed.has(s.id));
-  const answeredCount = questions.filter((q) => (answers[q.id] ?? "").trim()).length;
-  const hasDraftAnswers = answeredCount > 0;
+  const followedSet = new Set(progress.followedSocialIds);
+  const followedCount = requiredSocials.filter((s) => followedSet.has(s.id)).length;
+  const socialsDone = requiredSocials.every((s) => followedSet.has(s.id));
+  const isCompleted = progress.status === 'completed';
+  const hasAnswers = Object.values(progress.answers).some((a) => a?.trim());
 
-  const answerPayload = () =>
-    questions.map((q) => ({ questionId: q.id, answerText: answers[q.id] ?? "" }));
+  const answerPayload = (ansMap: Record<string, string>) =>
+    questions.map((q) => ({ questionId: q.id, answerText: ansMap[q.id] ?? '' }));
 
-  // ── Actions ──────────────────────────────────────────────────────────────
-
-  const markVideoWatched = () => {
-    if (videoWatched || isCompleted) return;
-    setVideoWatched(true);
-    onboardApi.saveDraft({ videoWatched: true }).catch(() => {
-      // Not critical — it is sent again with the final submission
-    });
-  };
-
-  const markFollowed = (social: OnboardSocial) => {
-    if (followed.has(social.id) || isCompleted) return;
-    setFollowedIds((ids) => [...ids, social.id]);
-    onboardApi.saveDraft({ followedSocialIds: [social.id] }).catch(() => {
-      // Not critical — every follow is sent again with the final submission
-    });
-  };
-
-  const openQuestions = () => {
-    if (!socialsDone || isCompleted) return;
-    // Resume at the first unanswered question
-    const firstOpen = questions.findIndex((q) => !(answers[q.id] ?? "").trim());
-    setQuestionIndex(firstOpen === -1 ? 0 : firstOpen);
-    setModalError(null);
-    setModal("questions");
-  };
-
-  const saveAndExit = async () => {
-    setIsBusy(true);
-    setModalError(null);
-    try {
-      await onboardApi.saveDraft({ answers: answerPayload() });
-      setProgressStatus("draft");
-      setModal("none");
-      setToast("Progress saved — pick up where you left off any time.");
-    } catch (err) {
-      setModalError(err instanceof Error ? err.message : "Couldn’t save your answers. Please try again.");
-    } finally {
-      setIsBusy(false);
+  const save = async (patch: Partial<OnboardProgress>) => {
+    const next: OnboardProgress = { ...progress, ...patch };
+    setProgress(next);
+    if (!isCompleted) {
+      try {
+        await onboardApi.saveDraft({
+          videoWatched: next.videoWatched,
+          followedSocialIds: next.followedSocialIds,
+          answers: answerPayload(next.answers),
+        });
+      } catch {
+        // Non-critical, saved locally in state
+      }
     }
+  };
+
+  const steps: StepState[] = (() => {
+    const flags = [progress.videoWatched, socialsDone, isCompleted];
+    const firstOpen = flags.findIndex((f) => !f);
+    return flags.map((f, i) => (f ? 'done' : i === firstOpen ? 'current' : 'todo'));
+  })();
+
+  const currentQ = questionIndex !== null ? questions[questionIndex] : null;
+  const currentAnswer = currentQ ? progress.answers[currentQ.id] ?? '' : '';
+  const isLast = questionIndex === questions.length - 1;
+
+  const closeQuestions = async () => {
+    await save({});
+    setQuestionIndex(null);
+    setModalError(null);
+    setToast('Progress saved — pick up where you left off any time.');
   };
 
   const submit = async () => {
     setIsBusy(true);
     setModalError(null);
     try {
-      const result = await onboardApi.submitPart1({
-        answers: answerPayload(),
-        followedSocialIds: followedIds,
-        videoWatched,
+      await onboardApi.submitPart1({
+        videoWatched: progress.videoWatched,
+        followedSocialIds: progress.followedSocialIds,
+        answers: answerPayload(progress.answers),
       });
-      setProgressStatus("completed");
-      setCompletedAt(result.completedAt);
-      setModal("done");
-    } catch (err) {
-      // Point the learner at the first question the server rejected
+      setProgress({ ...progress, status: 'completed' });
+      setQuestionIndex(null);
+      setDone(true);
+    } catch (err: unknown) {
       const fieldErrors =
         err instanceof ApiErrorResponse
           ? ((err.data?.errors ?? []) as { field: string; message: string }[])
@@ -400,7 +202,7 @@ export default function OnboardView() {
       } else {
         setModalError(
           fieldErrors[0]?.message ||
-            (err instanceof Error ? err.message : "Couldn’t submit your answers. Please try again.")
+            (err instanceof Error ? err.message : 'Couldn’t submit your answers. Please try again.'),
         );
       }
     } finally {
@@ -408,331 +210,407 @@ export default function OnboardView() {
     }
   };
 
-  // ── Task rail state ──────────────────────────────────────────────────────
-
-  const videoState: TaskState = videoWatched || isCompleted ? "done" : "current";
-  const socialsState: TaskState = socialsDone || isCompleted ? "done" : videoWatched ? "current" : "pending";
-  const questionsState: TaskState = isCompleted ? "done" : socialsDone ? "current" : "pending";
-
-  const videoDetail = [
-    minutesLabel(content.video.minutes),
-    videoWatched || isCompleted ? "watched" : content.video.url ? "start here" : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  const socialsDetail =
-    requiredSocials.length === 0
-      ? "Optional"
-      : `${requiredSocials.filter((s) => followed.has(s.id)).length} of ${requiredSocials.length} followed · ${
-          requiredSocials.length === 2 ? "Both required" : "All required"
-        }`;
-
-  const questionsDetail = isCompleted
-    ? "Submitted"
-    : hasDraftAnswers
-      ? `${answeredCount} of ${questions.length} answered`
-      : content.questionsMinutes
-        ? `About ${minutesLabel(content.questionsMinutes)}`
-        : `${questions.length} question${questions.length === 1 ? "" : "s"}`;
-
-  // ── Question modal state ─────────────────────────────────────────────────
-
-  const currentQuestion = questions[questionIndex];
-  const currentAnswer = currentQuestion ? answers[currentQuestion.id] ?? "" : "";
-  const isLastQuestion = questionIndex >= questions.length - 1;
-  const currentBlocked = !!currentQuestion?.required && !currentAnswer.trim();
-
   return (
-    <PageFrame collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((c) => !c)}>
-      {toast && (
-        <div
-          role="status"
-          className="fixed top-5 right-5 z-60 rounded-xl bg-[#171730] px-4 py-2.5 text-[12.5px] font-medium text-white shadow-xl animate-in fade-in slide-in-from-top-3"
+    <AppShell>
+      <div className="mx-auto max-w-5xl space-y-6">
+        {toast && (
+          <div
+            role="status"
+            className="fixed top-5 right-5 z-60 rounded-xl bg-[#171730] px-4 py-2.5 text-[12.5px] font-medium text-white shadow-xl animate-in fade-in slide-in-from-top-3"
+          >
+            {toast}
+          </div>
+        )}
+
+        <Link
+          className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#7c2ae8] transition-colors link-cta"
+          href="/dashboard"
         >
-          {toast}
-        </div>
-      )}
+          <Arrow dir="left" /> Back to dashboard
+        </Link>
 
-      {/* Heading */}
-      <div>
-        {content.stepLabel && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f0eafb] px-3 py-1 text-[10px] font-bold tracking-wider text-[#7c2ae8] uppercase">
-            ● {content.stepLabel}
-          </span>
-        )}
-        <h1 className="mt-2 text-[24px] sm:text-[26px] font-bold tracking-tight text-[#171730]">
-          {content.page.title}
-        </h1>
-        {content.page.subtitle && (
-          <p className="mt-1 text-[13px] leading-relaxed text-[#5f5f7a]">{content.page.subtitle}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left: video + socials */}
-        <div className="space-y-6 lg:col-span-8">
-          <IntroVideo video={content.video} watched={videoWatched} onWatched={markVideoWatched} />
-
-          {socials.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[13.5px] font-bold text-[#171730]">
-                  {content.socialsHeading || "Follow us"}
-                </h2>
-                {requiredSocials.length > 0 && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase ${
-                      socialsDone ? "bg-[#dcfce7] text-[#16a34a]" : "bg-[#fef3c7] text-[#b45309]"
-                    }`}
-                  >
-                    {socialsDone ? "DONE" : "REQUIRED"}
-                  </span>
-                )}
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {socials.map((social) => (
-                  <SocialCard
-                    key={social.id}
-                    social={social}
-                    followed={followed.has(social.id) || isCompleted}
-                    onFollow={() => markFollowed(social)}
-                  />
-                ))}
-              </div>
-            </div>
+        <div>
+          <h1 className="text-[24px] sm:text-[26px] font-medium tracking-tight text-[#171730]">
+            {content.page.title}
+          </h1>
+          {content.page.subtitle && (
+            <p className="mt-1 text-[13px] leading-relaxed text-[#5f5f7a]">
+              {content.page.subtitle}
+            </p>
           )}
         </div>
 
-        {/* Right: task rail */}
-        <div className="lg:col-span-4">
-          <div className="rounded-2xl border border-[#ececf2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
-            <h3 className="text-[11px] font-bold tracking-wider text-[#8e8ea6] uppercase">YOUR TASK</h3>
-
-            <div className="space-y-4">
-              <TaskStep
-                index={1}
-                state={videoState}
-                title={content.tasks.video || "Watch the intro"}
-                detail={videoDetail || null}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Left Column: Video & Note */}
+          <div className="space-y-6 lg:col-span-8">
+            <div className="space-y-2">
+              <IntroVideo
+                url={content.video.url ?? ''}
+                title={content.video.caption}
+                watched={progress.videoWatched}
+                onProgress={setWatchFraction}
+                onWatched={() => save({ videoWatched: true })}
               />
-              {socials.length > 0 && (
-                <TaskStep
-                  index={2}
-                  state={socialsState}
-                  title={content.tasks.socials || content.socialsHeading || "Follow us"}
-                  detail={socialsDetail}
-                />
-              )}
-              <TaskStep
-                index={socials.length > 0 ? 3 : 2}
-                state={questionsState}
-                title={content.tasks.questions || "Answer a short set of questions"}
-                detail={questionsDetail}
-              />
-            </div>
 
-            {content.taskNote && (
-              <div className="rounded-xl bg-[#f0eafb] p-3 text-[#5b21b6] text-[11.5px] leading-relaxed flex items-start gap-2">
-                <span className="text-[#7c2ae8] font-bold" aria-hidden="true">
-                  ℹ
-                </span>
-                <span>{content.taskNote}</span>
-              </div>
-            )}
-
-            {isCompleted ? (
-              <>
-                <div className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] p-3 text-[12px] text-[#166534]">
-                  ✓ {content.completion.title || "Completed"}
-                  {completedAt ? ` · ${formatDate(completedAt)}` : ""}
+              {/* What the video is about, and the watched indicator */}
+              <div className="flex flex-col gap-4 rounded-2xl border border-[#ececf2] bg-white p-4 sm:flex-row sm:items-center sm:p-5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium text-[#151534]">{VIDEO_TITLE}</p>
+                  <p className="mt-1 text-[12.5px] leading-5 text-[#5f5f7a]">{VIDEO_DESCRIPTION}</p>
+                  {content.video.minutes && (
+                    <p className="mt-1.5 text-[12px] text-[#8e8ea6]">
+                      {content.video.minutes} minutes
+                    </p>
+                  )}
                 </div>
-                <Link
-                  href="/dashboard"
-                  className="block w-full rounded-xl bg-gradient-to-r from-[#501c9c] via-[#6d25d6] to-[#983cf4] py-3 text-center text-[13.5px] font-semibold text-white shadow-md shadow-purple-950/20 transition hover:brightness-105"
+                {progress.videoWatched ? (
+                  <span className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 text-[14px] font-medium text-[#16a34a]">
+                    <Check className="size-4" />
+                    Watched
+                  </span>
+                ) : (
+                  <div
+                    className="w-full shrink-0 sm:w-44"
+                    role="progressbar"
+                    aria-label="Video watched"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(watchFraction * 100)}
+                  >
+                    <div className="flex items-baseline justify-between text-[12px]">
+                      <span className="text-[#5f5f7a]">Watched</span>
+                      <span className="font-medium tabular-nums text-[#151534]">
+                        {Math.round(watchFraction * 100)}%
+                      </span>
+                    </div>
+                    <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#f0f0f6]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#9b4dff] to-[#7c2ae8] transition-[width] duration-500"
+                        style={{ width: `${watchFraction * 100}%` }}
+                      />
+                      <span
+                        className="absolute inset-y-0 w-px bg-[#7c2ae8]/40"
+                        style={{ left: `${WATCH_THRESHOLD * 100}%` }}
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[11.5px] text-[#8e8ea6]">
+                      Watch {Math.round(WATCH_THRESHOLD * 100)}% to unlock the next steps
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {content.taskNote && (
+                <div className="flex items-start gap-2.5 rounded-xl bg-[#f0eafb] px-4 py-3 text-[12.5px] leading-5 text-[#5b21b6]">
+                  <svg
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 shrink-0 text-[#7c2ae8]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  >
+                    <circle cx="8" cy="8" r="6.25" />
+                    <path d="M8 7.25v3.5M8 5.25h.01" />
+                  </svg>
+                  <span>{content.taskNote}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Task rail */}
+          <div className="lg:col-span-4">
+            <div className="rounded-2xl border border-[#ececf2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+              <h3 className="text-[11px] font-medium text-[#8e8ea6]">Your task</h3>
+
+              <div className="space-y-4">
+                <Step
+                  n={1}
+                  state={steps[0]}
+                  title={content.tasks.video || 'Watch the intro'}
+                  sub={`${content.video.minutes ?? 10} minutes · ${progress.videoWatched ? 'watched' : 'start here'}`}
+                />
+
+                <Step
+                  n={2}
+                  state={steps[1]}
+                  title={content.tasks.socials || content.socialsHeading || 'Follow us'}
+                  sub={`${followedCount} of ${requiredSocials.length} followed · ${
+                    requiredSocials.length === 2 ? 'Both required' : 'All required'
+                  }`}
                 >
-                  Back to dashboard →
-                </Link>
-              </>
-            ) : (
-              <>
+                  <div className="mt-2.5 space-y-2">
+                    {socials.map((soc) => {
+                      const isFollowed = followedSet.has(soc.id);
+                      return (
+                        <div
+                          key={soc.id}
+                          className="flex items-center gap-2.5 rounded-xl border border-[#ececf2] bg-[#fbfbfd] p-2"
+                        >
+                          <span
+                            className={`grid size-7 shrink-0 place-items-center rounded-lg text-[11px] font-medium text-white ${
+                              soc.platform === 'x' ? 'bg-black' : 'bg-[#0077b5]'
+                            }`}
+                          >
+                            {soc.platform === 'x' ? '𝕏' : 'in'}
+                          </span>
+                          <span
+                            className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-[#45465f]"
+                            title={soc.handle}
+                          >
+                            {soc.platform === 'x' ? 'X' : 'LinkedIn'}
+                          </span>
+                          {!progress.videoWatched ? (
+                            <span
+                              className="inline-flex shrink-0 cursor-not-allowed items-center gap-1 rounded-lg border border-[#ece8f4] bg-white px-2.5 py-1 text-[11.5px] font-medium text-[#b9aed0]"
+                              title="Watch Kara's intro first"
+                            >
+                              Follow <Arrow dir="up-right" />
+                            </span>
+                          ) : (
+                            <a
+                              href={soc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => {
+                                if (!isFollowed) {
+                                  save({
+                                    followedSocialIds: [...progress.followedSocialIds, soc.id],
+                                  });
+                                }
+                              }}
+                              className={`inline-flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 text-[11.5px] font-medium transition cursor-pointer ${
+                                isFollowed
+                                  ? 'border-[#bbf7d0] bg-[#f0fdf4] text-[#16a34a]'
+                                  : 'border-[#d4c2f5] bg-white text-[#7c2ae8] hover:bg-[#f8f5fe]'
+                              }`}
+                            >
+                              {isFollowed ? (
+                                <>
+                                  Followed <Check className="size-3.5" />
+                                </>
+                              ) : (
+                                <>
+                                  Follow <Arrow dir="up-right" />
+                                </>
+                              )}
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Step>
+
+                <Step
+                  n={3}
+                  state={steps[2]}
+                  title={content.tasks.questions || 'Answer a short set of questions'}
+                  sub={`About ${content.questionsMinutes ?? 5} minutes`}
+                />
+              </div>
+
+              {isCompleted ? (
+                <ButtonLink href="/dashboard">Back to dashboard</ButtonLink>
+              ) : (
+                <>
+                  <Button
+                    disabled={!progress.videoWatched || !socialsDone}
+                    onClick={() => {
+                      const firstOpen = questions.findIndex(
+                        (x) => !progress.answers[x.id]?.trim(),
+                      );
+                      setQuestionIndex(firstOpen === -1 ? 0 : firstOpen);
+                      setModalError(null);
+                    }}
+                  >
+                    {hasAnswers ? 'Resume questions' : 'Continue to questions'}
+                  </Button>
+                  {!(progress.videoWatched && socialsDone) && (
+                    <p className="text-center text-[11px] text-[#b45309]">
+                      {!progress.videoWatched
+                        ? `Watch ${Math.round(WATCH_THRESHOLD * 100)}% of Kara’s intro to unlock the next steps.`
+                        : 'Follow both accounts in step 2 to continue.'}
+                    </p>
+                  )}
+                </>
+              )}
+              <p className="text-center text-[11px] font-medium text-[#8e8ea6]">
+                Required before the modules open
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Questions Modal */}
+        {currentQ && questionIndex !== null && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="onboard-question-title"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && !isBusy) closeQuestions();
+              }}
+              className="relative w-full rounded-2xl bg-white p-6 sm:p-7 shadow-2xl border border-[#ececf2] max-w-lg"
+            >
+              {/* Close button saves draft answers */}
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={closeQuestions}
+                aria-label="Close, your answers are saved"
+                title="Close, your answers are saved"
+                className="absolute -right-3 -top-3 grid size-9 cursor-pointer place-items-center rounded-full border border-[#ececf2] bg-white text-[#5f5f7a] transition hover:text-[#171730] hover:bg-[#f8f8fc] disabled:opacity-50"
+              >
+                <svg
+                  viewBox="0 0 16 16"
+                  aria-hidden="true"
+                  className="size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                >
+                  <path d="M4 4l8 8M12 4l-8 8" />
+                </svg>
+              </button>
+
+              <div>
+                <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-[#8e8ea6]">
+                  <span>{tagCase(content.questionsHeader)}</span>
+                  <span className="tabular-nums">
+                    {questionIndex + 1} of {questions.length}
+                  </span>
+                </div>
+                <div className="relative mt-2 h-1 w-full rounded-full bg-[#e4e4ee]">
+                  <div
+                    className="absolute top-0 left-0 h-full rounded-full bg-[#7c2ae8] transition-all duration-300"
+                    style={{
+                      width: `${((questionIndex + 1) / questions.length) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {content.questionsIntro && (
+                <p className="mt-4 text-[12px] text-[#5f5f7a] leading-relaxed">
+                  {content.questionsIntro}
+                </p>
+              )}
+
+              <h3
+                id="onboard-question-title"
+                className="mt-3 text-[16px] font-medium text-[#171730]"
+              >
+                {currentQ.question}
+                {!currentQ.required && (
+                  <span className="ml-1.5 text-[12px] font-normal text-[#8e8ea6]">— optional</span>
+                )}
+              </h3>
+
+              <div className="mt-3">
+                <LabelInput
+                  key={currentQ.id}
+                  id={currentQ.id}
+                  label={currentQ.required ? 'Your answer' : 'Your answer (optional)'}
+                  multiline
+                  height={112}
+                  corner={12}
+                  autoFocus
+                  maxLength={currentQ.maxLength}
+                  placeholder={currentQ.placeholder}
+                  value={currentAnswer}
+                  onChange={(v) => {
+                    if (modalError) setModalError(null);
+                    setProgress({
+                      ...progress,
+                      answers: { ...progress.answers, [currentQ.id]: v },
+                    });
+                  }}
+                />
+                <div className="mt-1 flex items-start justify-between gap-3 text-[11px] text-[#8e8ea6]">
+                  <span>{currentQ.hint}</span>
+                  <span className="shrink-0">Max {currentQ.maxLength} characters</span>
+                </div>
+              </div>
+
+              {modalError && (
+                <p role="alert" className="mt-2 text-[12px] font-medium text-red-500">
+                  {modalError}
+                </p>
+              )}
+
+              <div className="mt-6 flex items-center justify-between pt-3 border-t border-[#f0f0f5]">
                 <button
                   type="button"
-                  onClick={openQuestions}
-                  disabled={!socialsDone || isBusy || questions.length === 0}
-                  className="w-full rounded-xl bg-gradient-to-r from-[#501c9c] via-[#6d25d6] to-[#983cf4] py-3 text-[13.5px] font-semibold text-white shadow-md shadow-purple-950/20 transition hover:brightness-105 active:scale-[0.99] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={questionIndex === 0 || isBusy}
+                  onClick={() => {
+                    setModalError(null);
+                    setQuestionIndex(questionIndex - 1);
+                  }}
+                  className="text-[12.5px] font-medium text-[#7c2ae8] link-cta cursor-pointer disabled:opacity-50"
                 >
-                  {hasDraftAnswers ? "Resume questions →" : "Continue to questions →"}
+                  <Arrow dir="left" /> Back
                 </button>
-                {!socialsDone && (
-                  <p className="text-center text-[11px] text-[#b45309]">
-                    Follow the required accounts above to continue.
-                  </p>
-                )}
-                {modal === "none" && modalError && (
-                  <p role="alert" className="text-center text-[11.5px] text-red-500">
-                    {modalError}
-                  </p>
-                )}
-                <p className="text-center text-[9.5px] font-bold tracking-wider text-[#8e8ea6] uppercase">
-                  REQUIRED BEFORE THE MODULES OPEN
+                <Button
+                  size="md"
+                  showIcon={!isLast}
+                  disabled={currentQ.required && !currentAnswer.trim()}
+                  loading={isBusy}
+                  loadingLabel={isLast ? 'Submitting…' : 'Saving…'}
+                  onClick={async () => {
+                    if (isLast) {
+                      await submit();
+                    } else {
+                      await save({});
+                      setModalError(null);
+                      setQuestionIndex(questionIndex + 1);
+                    }
+                  }}
+                >
+                  {isLast ? 'Submit' : 'Next'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Completion Modal */}
+        {done && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="onboard-done-title"
+              className="relative w-full rounded-2xl bg-white p-6 sm:p-7 shadow-2xl border border-[#ececf2] max-w-md text-center"
+            >
+              <span className="mx-auto grid size-12 place-items-center rounded-full bg-[#dcfce7] text-[#16a34a]">
+                <Check className="size-7" />
+              </span>
+              <h3 id="onboard-done-title" className="mt-4 text-[20px] font-medium text-[#171730]">
+                {content.completion.title || 'Done'}
+              </h3>
+              {content.completion.message && (
+                <p className="mt-2 text-[12.5px] leading-relaxed text-[#5f5f7a] max-w-xs mx-auto">
+                  {content.completion.message}
                 </p>
-              </>
-            )}
+              )}
+              <div className="mt-6">
+                <Button onClick={() => router.push('/dashboard')}>Back to dashboard</Button>
+              </div>
+              {content.completion.nextStepNote && (
+                <p className="mt-3.5 text-[11px] text-[#8e8ea6]">
+                  🔒 {content.completion.nextStepNote}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
-
-      {/* Questions */}
-      {modal === "questions" && currentQuestion && (
-        <Modal labelledBy="onboard-question-title" onClose={isBusy ? undefined : closeQuestions}>
-          <div>
-            <div className="flex items-center justify-between text-[10px] font-bold tracking-wider text-[#8e8ea6] uppercase">
-              <span>{content.questionsHeader}</span>
-              <span>
-                {questionIndex + 1} of {questions.length}
-              </span>
-            </div>
-            <div className="relative mt-2 h-1 w-full rounded-full bg-[#e4e4ee]">
-              <div
-                className="absolute top-0 left-0 h-full rounded-full bg-[#7c2ae8] transition-all duration-300"
-                style={{ width: `${((questionIndex + 1) / questions.length) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {content.questionsIntro && (
-            <p className="mt-4 text-[12px] text-[#5f5f7a] leading-relaxed">{content.questionsIntro}</p>
-          )}
-
-          <h3 id="onboard-question-title" className="mt-3 text-[16px] font-bold text-[#171730]">
-            {currentQuestion.question}
-            {!currentQuestion.required && (
-              <span className="ml-1.5 text-[12px] font-normal text-[#8e8ea6]">— optional</span>
-            )}
-          </h3>
-
-          <div className="mt-3">
-            <textarea
-              key={currentQuestion.id}
-              autoFocus
-              rows={4}
-              maxLength={currentQuestion.maxLength}
-              value={currentAnswer}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (modalError) setModalError(null);
-                setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
-              }}
-              placeholder={currentQuestion.placeholder}
-              aria-label={currentQuestion.question}
-              className="w-full rounded-xl border border-[#7c2ae8] p-3.5 text-[13px] text-[#171730] outline-none ring-1 ring-[#7c2ae8] transition placeholder:text-[#9ca3af] resize-none"
-            />
-            <div className="mt-1 flex items-start justify-between gap-3 text-[11px] text-[#8e8ea6]">
-              <span>{currentQuestion.hint}</span>
-              <span className="shrink-0 font-mono">
-                {currentAnswer.length} / {currentQuestion.maxLength}
-              </span>
-            </div>
-          </div>
-
-          {modalError && (
-            <p role="alert" className="mt-3 text-[12px] font-medium text-red-500">
-              {modalError}
-            </p>
-          )}
-
-          <div className="mt-6 flex items-center justify-between pt-3 border-t border-[#f0f0f5]">
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => (questionIndex > 0 ? setQuestionIndex(questionIndex - 1) : closeQuestions())}
-              className="text-[12.5px] font-semibold text-[#7c2ae8] hover:underline cursor-pointer disabled:opacity-50"
-            >
-              ← Back
-            </button>
-
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={saveAndExit}
-              className="text-[12px] text-[#8e8ea6] hover:text-[#171730] cursor-pointer disabled:opacity-50"
-            >
-              Save &amp; exit
-            </button>
-
-            <button
-              type="button"
-              disabled={currentBlocked || isBusy}
-              onClick={() => {
-                setModalError(null);
-                if (isLastQuestion) submit();
-                else setQuestionIndex(questionIndex + 1);
-              }}
-              className="rounded-full bg-[#171730] px-5 py-2 text-[12.5px] font-bold text-white transition hover:bg-black cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {isBusy && isLastQuestion ? "Submitting…" : isLastQuestion ? "Submit" : "Next"}
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {/* Completion */}
-      {modal === "done" && (
-        <Modal labelledBy="onboard-done-title" className="max-w-md text-center">
-          <span className="mx-auto grid size-12 place-items-center rounded-full bg-[#dcfce7] text-[#16a34a]">
-            <svg className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </span>
-          <h3 id="onboard-done-title" className="mt-4 text-[20px] font-bold text-[#171730]">
-            {content.completion.title || "Done"}
-          </h3>
-          {content.completion.message && (
-            <p className="mt-2 text-[12.5px] leading-relaxed text-[#5f5f7a] max-w-xs mx-auto">
-              {content.completion.message}
-            </p>
-          )}
-          <button
-            type="button"
-            autoFocus
-            onClick={() => router.push("/dashboard")}
-            className="mt-6 w-full rounded-xl bg-gradient-to-r from-[#501c9c] via-[#6d25d6] to-[#983cf4] py-3 text-[14px] font-semibold text-white shadow-md shadow-purple-950/20 transition hover:brightness-105 cursor-pointer"
-          >
-            Back to dashboard
-          </button>
-          {content.completion.nextStepNote && (
-            <p className="mt-3.5 text-[11px] text-[#8e8ea6]">🔒 {content.completion.nextStepNote}</p>
-          )}
-        </Modal>
-      )}
-    </PageFrame>
-  );
-}
-
-function PageFrame({
-  collapsed,
-  onToggle,
-  children,
-}: {
-  collapsed: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-[#f8f8fc] font-sans antialiased text-[#171730]">
-      <DashboardSidebar collapsed={collapsed} onToggle={onToggle} />
-      <main className="flex-1 px-4 py-6 sm:px-8 lg:px-12 sm:py-8 overflow-y-auto">
-        <div className="mx-auto max-w-5xl space-y-6">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#7c2ae8] transition-colors hover:underline"
-          >
-            ← Back to dashboard
-          </Link>
-          {children}
-        </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }
