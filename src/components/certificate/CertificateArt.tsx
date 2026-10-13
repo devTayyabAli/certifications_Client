@@ -1,95 +1,75 @@
 'use client';
-// The certificate card. `preview` = locked state with the PREVIEW stamp.
+// The Si Her DeFi certificate (design "1a — Certificate · Light", 2000×2000).
+// The static artwork is public/v2/certificate-base.svg (the design file with the name, badges and
+// on-chain values taken out); those three are drawn on top so they're live: the member's name,
+// the badge art for every module they passed, and the contract / token / verify details.
+// Everything is positioned in the design's own 2000-unit grid (as % of the square) and sized
+// with container units, so it scales with the card and downloads as the same image.
 import { forwardRef } from 'react';
 import { assetPath } from '@/lib/constants';
-import type { CertificateData } from '@/lib/api';
-import { Arrow } from '@/components/ui/Arrow';
+import { shortAddress } from '@/lib/format';
+import type { Certificate } from '@/lib/types';
 
-const TOTAL = 12;
+const pct = (n: number) => `${(n / 2000) * 100}%`;
+const cq = (n: number) => `${(n / 2000) * 100}cqw`;
+const badgePosition = (index: number, count: number) => {
+  const firstRow = Math.min(count, 7);
+  const row = index < firstRow ? 0 : 1;
+  const rowCount = row === 0 ? firstRow : count - firstRow;
+  const column = row === 0 ? index : index - firstRow;
+  // Preserve the design's 190-unit spacing, centering each occupied row.
+  return { x: 1000 - (rowCount * 150 + (rowCount - 1) * 40) / 2 + column * 190, y: row === 0 ? 1104 : 1298 };
+};
 
-export const CertificateArt = forwardRef<HTMLDivElement, { cert: CertificateData; preview: boolean; weekTitles?: Record<number, string> }>(function CertificateArt({ cert, preview, weekTitles = {} }, ref) {
-  const c = cert.content;
-  const byWeek = new Map(cert.badges.map((b) => [b.week, b]));
-  const issued = cert.issuedAt ? new Date(cert.issuedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : `After the Week ${cert.unlockModule?.week ?? 1} quiz`;
-  const minted = cert.status === 'minted' && cert.onChain?.explorerUrl;
+export const CertificateArt = forwardRef<HTMLDivElement, { cert: Certificate | any; preview: boolean; weekTitles?: Record<number, string> }>(function CertificateArt({ cert, preview, weekTitles = {} }, ref) {
+  const earnedBadges = [...(cert.badges ?? [])].sort((a, b) => (a.week ?? 0) - (b.week ?? 0)).slice(0, 12);
+  const name = cert.recipientName || 'Your name';
+  // shrink long names so they stay on one line inside the 1250-unit text column
+  const nameSize = Math.min(140, 1250 / Math.max(1, name.length * 0.56));
+  const minted = cert.status === 'minted';
+  const info = [
+    { x: 527, label: 'CONTRACT', value: minted && cert.onChain?.contractAddress ? shortAddress(cert.onChain.contractAddress) : 'At mint' },
+    { x: 795, label: 'TOKEN ID', value: minted && cert.onChain?.tokenId ? `#${String(cert.onChain.tokenId).padStart(4, '0')}` : '—' },
+    { x: 989, label: 'NETWORK', value: <span className="inline-flex items-center" style={{ gap: cq(14) }}><span className="rounded-full bg-[#0052ff]" style={{ width: cq(22), height: cq(22) }} />BASE</span> },
+    { x: 1168, label: 'VERIFY', value: 'si3.space/verify' },
+  ];
+
   return (
-    <div ref={ref} className="relative overflow-hidden rounded-3xl border border-[#ececf2] bg-white p-7 sm:p-10 shadow-md">
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#5b1ea6] via-[#7526dd] to-[#a855f7]" />
+    <div ref={ref} className="relative w-full overflow-hidden rounded-2xl bg-[#FCFBFF] shadow-md [container-type:inline-size]" style={{ aspectRatio: '1 / 1' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={assetPath('/v2/certificate-base.svg')} alt="" className="absolute inset-0 size-full select-none" draggable={false} />
+
+      <div className={`absolute inset-0 ${preview ? 'opacity-60' : ''}`}>
+        {/* name */}
+        <p className="absolute inset-x-0 text-center font-medium leading-none tracking-[-0.025em] text-[#14122B] whitespace-nowrap" style={{ top: pct(378), fontSize: cq(nameSize) }}>{name}</p>
+
+        {/* Only earned badges, in module order, with each occupied row centered. */}
+        {earnedBadges.map((b, i) => {
+          const s = badgePosition(i, earnedBadges.length);
+          const title = (b.week != null ? weekTitles[b.week] : '') ?? b.moduleTitle ?? b.name ?? '';
+          return (
+            <div key={b.week ?? b.id ?? i} className="absolute grid place-items-center" style={{ left: pct(s.x), top: pct(s.y), width: pct(150), height: pct(173) }}
+              title={`${title} · ${b.name}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assetPath(b.image)} alt={b.name} className="size-full object-contain drop-shadow-[0_6px_10px_rgba(94,50,149,0.25)]" />
+            </div>
+          );
+        })}
+
+        {/* on-chain details inside the design's box */}
+        {info.map((c) => (
+          <div key={c.label} className="absolute" style={{ left: pct(c.x), top: pct(1601) }}>
+            <p className="font-medium leading-none tracking-[0.12em] text-[#8179A8]" style={{ fontSize: cq(23) }}>{c.label}</p>
+            <p className="font-medium leading-none tabular-nums text-[#14122B]" style={{ fontSize: cq(33), marginTop: cq(22) }}>{c.value}</p>
+          </div>
+        ))}
+      </div>
+
       {preview && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
-          <span className="-rotate-12 rounded-xl border-2 border-[#ddd6fe] px-6 py-2 text-[22px] font-medium text-[#ddd6fe]">Preview</span>
+          <span className="-rotate-12 rounded-xl border-2 border-[#ddd6fe] bg-white/70 px-6 py-2 text-[22px] font-medium text-[#b9a6e8]">Preview</span>
         </div>
       )}
-      <div className={`mx-auto max-w-[540px] space-y-5 text-center pt-2 ${preview ? 'opacity-60' : ''}`}>
-        <div className="mx-auto flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img alt="" className="size-[62px] object-contain drop-shadow-[0_6px_14px_rgba(124,42,232,0.3)]" src={assetPath('/Badge_earned.png')} />
-        </div>
-        <p className="text-[11px] font-medium text-[#8e8ea6]">Certificate of completion</p>
-        <h2 className="text-[28px] sm:text-[34px] font-medium tracking-tight text-[#171730] break-words">{cert.recipientName}</h2>
-        <p className="mx-auto max-w-[460px] text-[12px] leading-relaxed text-[#5f5f7a]">{c.statement}</p>
-        <div className="pt-1">
-          <p className="text-[15px] font-medium text-[#171730]">{c.programName}</p>
-          <p className="mt-1 text-[11px] font-medium text-[#8e8ea6]">{c.cohortLabel} · {c.cohortDates} · Powered by Base</p>
-        </div>
-        <div className="relative flex items-center justify-center pt-3">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#ececf2]" /></div>
-          <span className="relative bg-white px-3 text-[11px] font-medium text-[#8e8ea6]">Module badges earned · {cert.badges.length} of {cert.totalBadges || TOTAL}</span>
-        </div>
-        <div className="mx-auto flex max-w-[460px] flex-wrap items-center justify-center gap-2 sm:gap-3 py-1">
-          {Array.from({ length: cert.totalBadges || TOTAL }, (_, i) => i + 1).map((w) => {
-            const b = byWeek.get(w);
-            return b ? (
-              <div key={w} className="relative size-[38px] sm:size-[46px] drop-shadow-xs" title={`Week ${w}: ${weekTitles[w] ?? b.moduleTitle ?? ''} — ${b.name}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img alt={b.name} className="size-full object-contain" src={b.image} />
-              </div>
-            ) : (
-              <div key={w} className="relative grid size-[38px] sm:size-[46px] place-items-center" title={`Week ${w} — not earned yet`}>
-                <svg viewBox="0 0 100 115" className="absolute inset-0 size-full"><polygon points="50 3, 97 29, 97 86, 50 112, 3 86, 3 29" fill="none" stroke="#d8d8e5" strokeWidth="3" strokeDasharray="7 6" /></svg>
-                <span className="relative text-[10px] font-medium text-[#c4c4d4]">{String(w).padStart(2, '0')}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-0 rounded-xl border border-[#ececf2] bg-[#f9fafc] p-3 text-center text-[10px]">
-          <div className="space-y-0.5 sm:border-r sm:border-[#ececf2]/80">
-            <p className="font-medium text-[#8e8ea6] text-[11px]">Issued</p>
-            <p className="font-medium text-[#171730]">{issued}</p>
-          </div>
-          <div className="space-y-0.5 sm:border-r sm:border-[#ececf2]/80">
-            <p className="font-medium text-[#8e8ea6] text-[11px]">Credential ID</p>
-            <p className="tabular-nums text-[10px] text-[#171730]">{cert.verificationCode ?? '—'}</p>
-          </div>
-          <div className="space-y-0.5">
-            <p className="font-medium text-[#8e8ea6] text-[11px]">{minted ? 'On-chain' : 'Network'}</p>
-            {minted ? (
-              <a href={cert.onChain.explorerUrl!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 font-medium text-[#7c2ae8] link-cta">
-                <span className="size-1.5 rounded-full bg-[#0052ff]" />Token #{cert.onChain.tokenId} <Arrow dir="up-right" />
-              </a>
-            ) : (
-              <p className="inline-flex items-center justify-center gap-1 font-medium text-[#171730]"><span className="size-1.5 rounded-full bg-[#0052ff]" />{cert.onChain?.network || 'Base'}</p>
-            )}
-          </div>
-        </div>
-        {!preview && cert.verificationCode && (
-          <p className="text-[10.5px] text-[#8e8ea6] break-all">
-            Verify at <a href={assetPath(`/credential/${cert.verificationCode}`)} className="font-medium text-[#7c2ae8] hover:text-[#5e3295]">certifications.si3.space/siherdefi/credential/{cert.verificationCode}</a>
-          </p>
-        )}
-        <div className="flex items-center justify-between gap-4 pt-5 text-left border-t border-[#f0f0f5]">
-          <div>
-            <p className="text-[11px] font-medium text-[#8e8ea6]">Issued by</p>
-            <p className="text-[13px] font-medium text-[#171730]">{c.issuerName}</p>
-            <p className="text-[9.5px] text-[#8e8ea6]">{c.issuerTagline}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] font-medium text-[#8e8ea6]">Presented by</p>
-            <p className="text-[13px] font-medium text-[#171730]">{c.presenterName}</p>
-            <p className="text-[9.5px] text-[#8e8ea6]">{c.presenterTagline}</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 });

@@ -175,12 +175,8 @@ export default function VerifyCodeForm({ email }: { email: string }) {
               setFrom(0, e.clipboardData.getData("text"));
             }}
             onFocus={(e) => e.target.select()}
-            className={`h-12 min-w-0 flex-1 rounded-lg border text-center text-base font-medium text-[#151534] transition outline-none focus:border-[#7b2fbe] focus:ring-2 focus:ring-[#7b2fbe]/20 disabled:opacity-60 ${
-              error
-                ? "border-red-400 bg-red-50/50"
-                : digit === ""
-                ? "border-[#e6e6f0] bg-white"
-                : "border-[#ddd3f5] bg-[#f4f0fd]"
+            className={`h-12 min-w-0 flex-1 rounded-lg border text-center text-base font-medium text-[#171730] transition outline-none focus:border-[#7c2ae8] focus:ring-2 focus:ring-[#7c2ae8]/20 disabled:opacity-60 ${
+              error ? "border-red-400 bg-red-50/50" : "border-[#dcdce8] bg-white"
             }`}
           />
         ))}

@@ -15,6 +15,7 @@ import { assetPath } from "@/lib/constants";
 import {
   badgeApi,
   certificateApi,
+  eventsApi,
   isAuthenticated,
   modulesApi,
   onboardApi,
@@ -25,6 +26,7 @@ import {
   type OnboardStatusResponse,
   type PartnerItem,
 } from "@/lib/api";
+import type { CohortEvent } from "@/lib/types";
 import { firstName, sessionWhen, shortAddress, tagCase } from "@/lib/format";
 
 const TOTAL_BADGES = 12;
@@ -280,6 +282,89 @@ function StartHere({ status }: { status: OnboardStatusResponse }) {
   );
 }
 
+function speakerParts(m: ModuleItem): { name: string; company?: string }[] {
+  const list = (m.speakers ?? []).filter((x) => x?.name).map((x) => ({ name: x.name, company: x.companyName }));
+  return list.length ? list : [{ name: m.presenter, company: m.partnerName || undefined }];
+}
+
+function Speakers({ m, tone = "light" }: { m: ModuleItem; tone?: "light" | "dark" }) {
+  const parts = speakerParts(m);
+  const nameCls = tone === "dark" ? "text-white/90" : "text-[#45465f]";
+  if (parts.length === 1) return <>{<span className={nameCls}>{parts[0].name}</span>}{parts[0].company ? ` · ${parts[0].company}` : ""}</>;
+  const shown = parts.slice(0, 2);
+  return (
+    <>
+      {shown.map((x, i) => (
+        <span key={x.name}>
+          {i > 0 && (i === shown.length - 1 && parts.length <= 2 ? " & " : ", ")}
+          <span className={nameCls}>{x.name}</span>
+          {x.company ? ` (${x.company})` : ""}
+        </span>
+      ))}
+      {parts.length > 2 && ` +${parts.length - 2} more`}
+    </>
+  );
+}
+
+const LinkedInMark = ({ className = "size-4" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+    <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z" />
+  </svg>
+);
+
+function EventCard({ e }: { e: CohortEvent }) {
+  const when = sessionWhen(e.date, e.endDate);
+  return (
+    <div className="flex flex-col gap-4 rounded-2xl border border-[#ececf2] bg-white p-4 transition hover:border-[#dcd0f2] sm:flex-row sm:items-center sm:p-5">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div
+          className="w-[60px] shrink-0 overflow-hidden rounded-xl border border-[#e6e0f2] bg-white text-center leading-none"
+          aria-hidden="true"
+        >
+          <div className="bg-gradient-to-b from-[#8b3df0] to-[#7c2ae8] py-1 text-[10.5px] font-medium text-white">
+            {when.month}
+          </div>
+          <div className="py-2.5 text-[22px] font-medium tabular-nums tracking-[-0.02em] text-[#151534]">
+            {when.day}
+          </div>
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-[15px] font-medium text-[#151534]">{e.title}</h3>
+            {e.kind === "linkedin-live" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#e8f1fb] px-2 py-0.5 text-[11px] font-medium text-[#0a66c2]">
+                <LinkedInMark className="size-3" />
+                LinkedIn Live
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-[12.5px] text-[#5f5f7a]">
+            <time dateTime={e.date}>
+              {when.weekday}, {when.month} {when.day}
+              {e.timeTba ? " · Time to be announced" : ` · ${when.time}`}
+            </time>
+          </p>
+          {(e.subtitle || e.partnerName) && (
+            <p className="mt-1 line-clamp-2 text-[12.5px] leading-5 text-[#7e7e96]">
+              {e.subtitle && <span className="text-[#45465f]">{e.subtitle}</span>}
+              {e.subtitle && e.partnerName ? " · " : ""}
+              {e.partnerName}
+            </p>
+          )}
+        </div>
+      </div>
+      <ButtonLink
+        href={e.link}
+        external
+        size="md"
+        className="shrink-0 max-sm:w-full"
+      >
+        {e.kind === "linkedin-live" ? "Join on LinkedIn" : "Open event"}
+      </ButtonLink>
+    </div>
+  );
+}
+
 function FeaturedModule({
   m,
   part1Done,
@@ -319,8 +404,7 @@ function FeaturedModule({
         </p>
         <div className="mt-3">
           <span className="text-[11px] text-white/75">
-            Presented by {m.presenter}
-            {m.partnerName ? ` · ${m.partnerName}` : ""}
+            Presented by <Speakers m={m} tone="dark" />
           </span>
         </div>
       </div>
@@ -436,9 +520,13 @@ function SessionCard({
               </time>
             </p>
           )}
-          <p className="mt-1 truncate text-[12.5px] text-[#7e7e96]">
-            <span className="text-[#45465f]">{m.presenter}</span>
-            {m.partnerName ? ` · ${m.partnerName}` : ""}
+          <p
+            className="mt-1 line-clamp-2 text-[12.5px] leading-5 text-[#7e7e96]"
+            title={speakerParts(m)
+              .map((x) => (x.company ? `${x.name} (${x.company})` : x.name))
+              .join(", ")}
+          >
+            <Speakers m={m} />
           </p>
         </div>
       </div>
@@ -698,6 +786,7 @@ function DashboardContent() {
   const [partners, setPartners] = useState<PartnerItem[]>([]);
   const [scheduling, setScheduling] = useState<ModuleItem | null>(null);
   const [shown, setShown] = useState(SESSIONS_STEP);
+  const [events, setEvents] = useState<CohortEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -721,6 +810,7 @@ function DashboardContent() {
       if (b.status === "fulfilled") setBadges(b.value);
       if (c.status === "fulfilled") setCert(c.value);
       if (p.status === "fulfilled" && Array.isArray(p.value)) setPartners(p.value);
+      eventsApi.getAll().then(setEvents).catch(() => {});
     } finally {
       setLoading(false);
     }
@@ -744,6 +834,12 @@ function DashboardContent() {
   const isDone = (m: ModuleItem) => !!m.quiz?.isPassed || !!m.quiz?.isSkipped;
   const featured = modules.find((m) => !isDone(m)) ?? null;
   const rest = modules.filter((m) => m !== featured);
+  // sessions + LinkedIn Lives in one list, by date
+  type Item = { kind: "module"; at: number; m: ModuleItem } | { kind: "event"; at: number; e: CohortEvent };
+  const items: Item[] = [
+    ...rest.map((m) => ({ kind: "module" as const, at: new Date(m.scheduledDate || 0).getTime(), m })),
+    ...events.map((e) => ({ kind: "event" as const, at: new Date(e.date).getTime(), e })),
+  ].sort((a, z) => a.at - z.at);
   const earned = badges?.earnedCount ?? 0;
   const earnedBadgeNames = new Set((badges?.badges ?? []).map((b) => b.name));
   const nextBadge = [...modules].sort((x, y) => x.week - y.week).find((m) => !earnedBadgeNames.has(m.badge?.name));
@@ -887,29 +983,37 @@ function DashboardContent() {
             )}
             <div className="space-y-3 pt-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-[11.5px] font-medium text-[#9a9cbd]">Upcoming sessions ({rest.length})</h2>
-                <span className="text-[11.5px] text-[#9a9cbd]">Add them to your calendar now</span>
+                <h2 className="text-[11.5px] font-medium text-[#9a9cbd]">
+                  {unlocked ? `Your sessions (${items.length})` : `Upcoming sessions (${items.length})`}
+                </h2>
+                <span className="text-[11.5px] text-[#9a9cbd]">
+                  {unlocked ? "All done. Rewatch any time." : "Add them to your calendar now"}
+                </span>
               </div>
               <div className="relative space-y-3">
-                {rest.slice(0, shown).map((m) => (
-                  <SessionCard key={m.slug} m={m} onSchedule={setScheduling} />
-                ))}
-                {shown < rest.length && (
+                {items.slice(0, shown).map((it) =>
+                  it.kind === "module" ? (
+                    <SessionCard key={it.m.slug} m={it.m} onSchedule={setScheduling} />
+                  ) : (
+                    <EventCard key={it.e.id} e={it.e} />
+                  )
+                )}
+                {shown < items.length && (
                   <div
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-[#f8f8fc]/0 via-[#f8f8fc]/80 to-[#f8f8fc] sm:h-24"
                   />
                 )}
               </div>
-              {rest.length > SESSIONS_STEP && (
-                <div className={`relative flex justify-center ${shown < rest.length ? "-mt-8" : "pt-1"}`}>
-                  {shown < rest.length ? (
+              {items.length > SESSIONS_STEP && (
+                <div className={`relative flex justify-center ${shown < items.length ? "-mt-8" : "pt-1"}`}>
+                  {shown < items.length ? (
                     <button
                       type="button"
                       onClick={() => setShown((n) => n + SESSIONS_STEP)}
                       className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#e2e2ec] bg-white px-4 py-2 text-[12.5px] font-medium text-[#45465f] transition hover:border-[#d4c2f5] hover:text-[#7c2ae8]"
                     >
-                      Show more sessions <span className="text-[#9a9cbd]">({rest.length - shown})</span>
+                      Show more sessions <span className="text-[#9a9cbd]">({items.length - shown})</span>
                       <svg
                         viewBox="0 0 16 16"
                         aria-hidden="true"

@@ -108,12 +108,12 @@ export default function LoginPage() {
           <p className="pt-3 text-[12.5px] leading-5 text-[#8688ae]">
             By continuing you agree to the{' '}
             <a
-              href="https://si3.space/policy/membersPolicy"
+              href="https://si3.space/policy/privacy"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-[#7b2fbe] underline decoration-from-font underline-offset-2"
             >
-              cohort guidelines
+              privacy policy
             </a>
             . We&apos;ll only email you about Si Her DeFi.
           </p>
