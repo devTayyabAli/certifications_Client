@@ -12,6 +12,15 @@ import type { Certificate } from '@/lib/types';
 
 const pct = (n: number) => `${(n / 2000) * 100}%`;
 const cq = (n: number) => `${(n / 2000) * 100}cqw`;
+/** The design's 33-unit value text, smaller when it wouldn't fit its column (≈0.6 units of width per unit of size per character). */
+const fitSize = (text: string, width: number) => Math.min(33, width / Math.max(1, text.length * 0.6));
+/** The network as the design shows it: one short word ("BASE", "SEPOLIA"). */
+const shortNetwork = (name?: string) => {
+  const n = (name || 'Base').toLowerCase();
+  if (n.includes('base') && n.includes('sepolia')) return 'BASE SEPOLIA';
+  if (n.includes('sepolia')) return 'SEPOLIA';
+  return 'BASE';
+};
 const badgePosition = (index: number, count: number) => {
   const firstRow = Math.min(count, 7);
   const row = index < firstRow ? 0 : 1;
@@ -27,11 +36,14 @@ export const CertificateArt = forwardRef<HTMLDivElement, { cert: Certificate | a
   // shrink long names so they stay on one line inside the 1250-unit text column
   const nameSize = Math.min(140, 1250 / Math.max(1, name.length * 0.56));
   const minted = cert.status === 'minted';
+  const network = shortNetwork(cert.onChain?.network);
+  // values come from the certificate's real on-chain data; each column is a
+  // fixed width in the design's box, so long values are set a little smaller
   const info = [
-    { x: 527, label: 'CONTRACT', value: minted && cert.onChain?.contractAddress ? shortAddress(cert.onChain.contractAddress) : 'At mint' },
-    { x: 795, label: 'TOKEN ID', value: minted && cert.onChain?.tokenId ? `#${String(cert.onChain.tokenId).padStart(4, '0')}` : '—' },
-    { x: 989, label: 'NETWORK', value: <span className="inline-flex items-center" style={{ gap: cq(14) }}><span className="rounded-full bg-[#0052ff]" style={{ width: cq(22), height: cq(22) }} />BASE</span> },
-    { x: 1168, label: 'VERIFY', value: 'si3.space/verify' },
+    { x: 527, width: 250, label: 'CONTRACT', text: cert.onChain?.contractAddress ? shortAddress(cert.onChain.contractAddress) : 'At mint' },
+    { x: 795, width: 180, label: 'TOKEN ID', text: minted && cert.onChain?.tokenId ? `#${String(cert.onChain.tokenId).padStart(4, '0')}` : '—' },
+    { x: 989, width: 165, label: 'NETWORK', text: network, dot: true },
+    { x: 1168, width: 320, label: 'VERIFY', text: cert.verificationCode || 'After it unlocks' },
   ];
 
   return (
@@ -60,7 +72,10 @@ export const CertificateArt = forwardRef<HTMLDivElement, { cert: Certificate | a
         {info.map((c) => (
           <div key={c.label} className="absolute" style={{ left: pct(c.x), top: pct(1601) }}>
             <p className="font-medium leading-none tracking-[0.12em] text-[#8179A8]" style={{ fontSize: cq(23) }}>{c.label}</p>
-            <p className="font-medium leading-none tabular-nums text-[#14122B]" style={{ fontSize: cq(33), marginTop: cq(22) }}>{c.value}</p>
+            <p className="inline-flex items-center whitespace-nowrap font-medium leading-none tabular-nums text-[#14122B]" style={{ fontSize: cq(fitSize(c.text, c.width - (c.dot ? 36 : 0))), marginTop: cq(22), gap: cq(14) }}>
+              {c.dot && <span className="rounded-full bg-[#0052ff]" style={{ width: cq(22), height: cq(22) }} />}
+              {c.text}
+            </p>
           </div>
         ))}
       </div>

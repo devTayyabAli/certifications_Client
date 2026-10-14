@@ -194,7 +194,7 @@ export default function CertificateView() {
               ) : (
                 <>
                   <span className="rounded bg-[#f0fdf4] border border-[#bbf7d0] px-2.5 py-0.5 text-[11px] font-medium text-[#16a34a]">
-                    {minted ? 'Minted on Base' : 'Earned'}
+                    {minted ? `Minted on ${cert.onChain?.network || 'Base'}` : 'Earned'}
                   </span>
                   <span className="text-[11.5px] text-[#8e8ea6]">
                     Updates as you pass more modules
@@ -363,14 +363,13 @@ export default function CertificateView() {
                 </>
               ) : (
                 <>
-                  <h3 className="text-[15px] font-medium text-[#171730]">Minting opens soon</h3>
+                  <h3 className="text-[15px] font-medium text-[#171730]">Claiming opens soon</h3>
                   <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
-                    Your certificate will be written on-chain as a soulbound token in your wallet —
-                    permanent and verifiable. We’ll let you know when claiming
-                    opens.
+                    Your certificate and badges will go to your wallet as soulbound tokens: permanent and
+                    verifiable. We’ll let you know when claiming opens.
                   </p>
                   <div className="flex items-center justify-between rounded-xl border border-[#ececf2] bg-[#f9fafc] px-3 py-2 text-[11px]">
-                    <span className="text-[#8e8ea6] font-medium text-[11px]">Mints to</span>
+                    <span className="text-[#8e8ea6] font-medium text-[11px]">Claims to</span>
                     {cert.walletAddress ? (
                       <span className="tabular-nums text-[#171730]">
                         {shortAddress(cert.walletAddress)}
@@ -382,7 +381,7 @@ export default function CertificateView() {
                     )}
                   </div>
                   <Button disabled showIcon={false}>
-                    Mint on Base — coming soon
+                    Claim on {cert.onChain?.network || 'Base'} · coming soon
                   </Button>
                 </>
               )}
