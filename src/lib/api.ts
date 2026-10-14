@@ -538,6 +538,18 @@ export interface CertificateOnChain {
   explorerUrl: string | null;
 }
 
+/** Signed by the server: what the learner's wallet may claim from the badges contract. */
+export interface ClaimVoucher {
+  contract: string;
+  chainId: number;
+  learner: string;
+  moduleIds: number[];
+  capstone: boolean;
+  nonce: string;
+  deadline: number;
+  signature: string;
+}
+
 export interface CertificateData {
   status: "locked" | "unlocked" | "minted";
   recipientName: string;
@@ -554,6 +566,9 @@ export interface CertificateData {
   /** Modules with an open quiz the learner hasn't passed yet */
   stillOpen: { week: number; title: string; slug: string }[];
   onChain: CertificateOnChain;
+  /** earned badges (week numbers) and the certificate not yet in the wallet; null when unknown */
+  claimable?: { moduleIds: number[]; capstone: boolean } | null;
+  /** true when the learner can claim something now from their own wallet */
   canMint: boolean;
   /** an on-chain mint in flight (poll until status is "minted"), or why the last one failed */
   mint?: {
@@ -598,13 +613,21 @@ export const certificateApi = {
   },
 
   /**
-   * Soulbound mint on Base to the connected wallet (gas covered by Si Her DAO)
+   * A signed voucher for the learner's wallet to claim its earned badges (and
+   * the certificate, once unlocked) from the badges contract.
    */
-  async mint() {
-    // A certificate only ever shows as minted once the server has the real
-    // on-chain record; a failure surfaces as an error, never a stand-in result
-    return request<CertificateData>("/certificate/mint", {
+  async claimVoucher() {
+    return request<ClaimVoucher>("/certificate/claim", { method: "POST" });
+  },
+
+  /**
+   * Reports the claim transaction the wallet sent. The server checks it on-chain;
+   * the certificate only shows as minted once that's confirmed.
+   */
+  async recordClaim(txHash: string) {
+    return request<CertificateData>("/certificate/claim/submitted", {
       method: "POST",
+      body: JSON.stringify({ txHash }),
     });
   },
 };

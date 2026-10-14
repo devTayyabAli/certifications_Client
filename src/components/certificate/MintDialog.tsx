@@ -1,18 +1,21 @@
 'use client';
-// Minting the certificate on-chain: review → sending → confirming → minted.
-// The server's minter wallet sends the transactions (gas covered by Si Her DAO;
-// the learner signs nothing). The certificate only shows as minted once the
-// chain confirms it, so this polls GET /certificate until it does.
+// Claiming badges (and the certificate, once unlocked) on-chain from the
+// learner's own wallet: review → confirm in your wallet → confirming → done.
+// The server signs a voucher for what was earned; the wallet sends claim() and
+// pays the network fee. The server confirms the transaction on-chain before the
+// certificate shows as minted, so this polls GET /certificate until it does.
 import { useEffect, useRef, useState } from 'react';
+import { useAccount } from 'wagmi';
 import { Button } from '@/components/ui/Button';
 import { Arrow } from '@/components/ui/Arrow';
 import { Check } from '@/components/ui/Check';
-import { certificateApi, type CertificateData } from '@/lib/api';
+import { ApiErrorResponse, certificateApi, type CertificateData } from '@/lib/api';
+import { claimErrorMessage, findLearnerProvider, sendClaim } from '@/lib/claim-badges';
 import { shortAddress } from '@/lib/format';
 
-type Step = 'review' | 'sending' | 'confirming' | 'done' | 'slow' | 'error';
+type Step = 'review' | 'wallet' | 'confirming' | 'done' | 'slow' | 'error';
 
-/** how often, and for how long, to check the chain before suggesting to come back later */
+/** how often, and for how long, to check before suggesting to come back later */
 const POLL_MS = 3000;
 const POLL_FOR_MS = 3 * 60 * 1000;
 
@@ -36,9 +39,9 @@ export function explorerName(url?: string | null) {
 }
 
 const STEPS: { id: Step; label: string }[] = [
-  { id: 'sending', label: 'Sending to the network' },
+  { id: 'wallet', label: 'Confirm in your wallet' },
   { id: 'confirming', label: 'Confirming on-chain' },
-  { id: 'done', label: 'Minted' },
+  { id: 'done', label: 'In your wallet' },
 ];
 
 export function MintDialog({
@@ -49,15 +52,26 @@ export function MintDialog({
 }: {
   cert: CertificateData;
   onClose: () => void;
+  /** called with the refreshed certificate once the claim is confirmed */
   onMinted: (c: CertificateData) => void;
-  /** skip the review step, e.g. to keep watching a mint that's already in flight */
+  /** skip the review step to keep watching a claim already in flight */
   startNow?: boolean;
 }) {
   const [step, setStep] = useState<Step>(startNow ? 'confirming' : 'review');
   const [error, setError] = useState('');
   const [result, setResult] = useState<CertificateData | null>(null);
+  const [txUrl, setTxUrl] = useState<string | null>(cert.mint?.explorerUrl ?? null);
   const alive = useRef(true);
+  const { address: wagmiAddress, connector } = useAccount();
+
   const network = cert.onChain?.network || 'Base';
+  const modules = cert.claimable?.moduleIds.length ?? 0;
+  const withCertificate = !!cert.claimable?.capstone;
+  const what = withCertificate
+    ? modules > 0
+      ? `your certificate and ${modules} ${modules === 1 ? 'badge' : 'badges'}`
+      : 'your certificate'
+    : `${modules} ${modules === 1 ? 'badge' : 'badges'}`;
   const closable = step === 'review' || step === 'done' || step === 'slow' || step === 'error';
 
   useEffect(() => {
@@ -75,24 +89,24 @@ export function MintDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [closable, onClose]);
 
-  /** Polls the certificate until the chain confirms the mint, it fails, or it's taking too long. */
-  const watch = async (first?: CertificateData) => {
+  /** Polls the certificate until the server has confirmed the claim on-chain, it failed, or it's slow. */
+  const watch = async (first: CertificateData) => {
     const started = Date.now();
-    let c = first ?? (await certificateApi.getCertificate());
+    let c = first;
     while (alive.current) {
-      if (c.status === 'minted') {
-        setResult(c);
-        setStep('done');
-        onMinted(c);
-        return;
-      }
-      if (c.mint?.error) {
-        setError(c.mint.error);
-        setStep('error');
+      if (c.mint?.explorerUrl) setTxUrl(c.mint.explorerUrl);
+      if (!c.mint?.pending) {
+        if (c.mint?.error) {
+          setError(c.mint.error);
+          setStep('error');
+        } else {
+          setResult(c);
+          setStep('done');
+          onMinted(c);
+        }
         return;
       }
       if (Date.now() - started > POLL_FOR_MS) {
-        setResult(c);
         setStep('slow');
         return;
       }
@@ -106,29 +120,36 @@ export function MintDialog({
     }
   };
 
-  const mint = async () => {
+  const claim = async () => {
     setError('');
-    setStep('sending');
+    setStep('wallet');
     try {
-      const c = await certificateApi.mint();
+      const voucher = await certificateApi.claimVoucher();
+      const provider = await findLearnerProvider(voucher.learner, {
+        address: wagmiAddress,
+        getProvider: connector ? () => connector.getProvider() : undefined,
+      });
+      const hash = await sendClaim(provider, voucher);
       if (!alive.current) return;
       setStep('confirming');
+      const c = await certificateApi.recordClaim(hash);
       await watch(c);
     } catch (e) {
       if (!alive.current) return;
-      setError(e instanceof Error && e.message ? e.message : 'Something went wrong. Nothing was charged; you can try again.');
+      // the server's messages already read well; wallet errors are translated
+      setError(e instanceof ApiErrorResponse && e.message ? e.message : claimErrorMessage(e));
       setStep('error');
     }
   };
 
-  // reopening while a mint is already in flight: just keep watching it
+  // reopened while a claim is confirming: just keep watching it
   useEffect(() => {
     if (!startNow) return;
     certificateApi
       .getCertificate()
       .then((c) => watch(c))
       .catch(() => setStep('slow'));
-    // runs once on open; watch() reads the latest certificate itself
+    // runs once on open; watch() keeps reading the latest certificate itself
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -163,7 +184,17 @@ export function MintDialog({
     </ol>
   );
 
-  const txUrl = result?.onChain?.explorerUrl ?? result?.mint?.explorerUrl ?? null;
+  const explorerLink = (label: string) =>
+    txUrl ? (
+      <a
+        href={txUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-[#e4d6fb] bg-[#f6f0fe] text-[15px] font-medium text-[#7c2ae8] transition hover:bg-[#efe5fd]"
+      >
+        {label} {explorerName(txUrl)} <Arrow dir="up-right" />
+      </a>
+    ) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#171730]/40 p-4 backdrop-blur-xs">
@@ -188,20 +219,17 @@ export function MintDialog({
 
         {step === 'review' && (
           <>
-            <p className="text-[12px] text-[#7c2ae8]">Mint on {network}</p>
+            <p className="text-[12px] text-[#7c2ae8]">Claim on {network}</p>
             <h2 id="mint-title" className="mt-1 text-[21px] font-medium tracking-tight text-[#171730]">
-              Mint your certificate
+              {withCertificate ? 'Claim your certificate' : 'Claim your badges'}
             </h2>
             <p className="mt-2 text-[13px] leading-6 text-[#5f5f7a]">
-              Your certificate and module badges become soulbound tokens in your wallet: permanent, verifiable,
-              and they can’t be transferred.
+              {withCertificate ? 'Your certificate and badges become' : 'Your badges become'} soulbound tokens in your
+              wallet: permanent, verifiable, and they can’t be transferred.
             </p>
             <div className="mt-4 divide-y divide-[#f0f0f5] rounded-2xl border border-[#ececf2] px-4">
-              <Row label="Certificate">{cert.content?.credentialName ?? 'Si Her DeFi certificate'}</Row>
-              <Row label="Badges">
-                {cert.badges?.length ?? 0} of {cert.totalBadges}
-              </Row>
-              <Row label="Mints to">
+              <Row label="You’ll claim">{what}</Row>
+              <Row label="To your wallet">
                 <span className="tabular-nums">{shortAddress(cert.walletAddress ?? '')}</span>
               </Row>
               <Row label="Network">
@@ -210,13 +238,11 @@ export function MintDialog({
                   {network}
                 </span>
               </Row>
-              <Row label="Gas fee">
-                <span className="text-[#16a34a]">Covered by Si Her DAO</span>
-              </Row>
+              <Row label="Network fee">Paid from your wallet</Row>
             </div>
             <div className="mt-6 space-y-2.5 text-center">
-              <Button onClick={mint} showIcon={false}>
-                Mint on {network}
+              <Button onClick={claim} showIcon={false}>
+                Claim on {network}
               </Button>
               <button type="button" onClick={onClose} className="link-cta text-[12.5px] font-medium text-[#5f5f7a]">
                 Not now
@@ -225,58 +251,41 @@ export function MintDialog({
           </>
         )}
 
-        {(step === 'sending' || step === 'confirming') && (
+        {(step === 'wallet' || step === 'confirming') && (
           <div className="text-center" aria-live="polite">
             <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#f4effe] text-[#7c2ae8]">
               <Spin className="size-6" />
             </span>
             <h2 id="mint-title" className="mt-4 text-[20px] font-medium tracking-tight text-[#171730]">
-              Minting on {network}…
+              {step === 'wallet' ? 'Confirm in your wallet' : `Claiming on ${network}…`}
             </h2>
             <p className="mx-auto mt-2 max-w-xs text-[13px] leading-6 text-[#5f5f7a]">
-              {step === 'sending'
-                ? 'Sending your certificate to the network. There’s nothing to sign or pay.'
+              {step === 'wallet'
+                ? `Approve the transaction in your wallet. It may ask to switch to ${network} first.`
                 : 'Waiting for the network to confirm it. This usually takes under a minute.'}
             </p>
             {progress}
           </div>
         )}
 
-        {step === 'done' && result && (
+        {step === 'done' && (
           <div className="text-center">
             <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#dcfce7] text-[#16a34a]">
               <Check className="size-7" />
             </span>
             <h2 id="mint-title" className="mt-4 text-[21px] font-medium tracking-tight text-[#171730]">
-              Minted on {result.onChain?.network || network}
+              {result?.status === 'minted' ? `Minted on ${result.onChain?.network || network}` : 'Badges claimed'}
             </h2>
             <p className="mx-auto mt-2 max-w-sm text-[13px] leading-6 text-[#5f5f7a]">
-              Your Si Her DeFi certificate is in your wallet. Share it, add it to LinkedIn, or verify it any time.
+              {result?.status === 'minted'
+                ? 'Your Si Her DeFi certificate is in your wallet. Share it, add it to LinkedIn, or verify it any time.'
+                : 'Your badges are in your wallet. Your certificate can be claimed the same way once it unlocks.'}
             </p>
-            <div className="mt-4 divide-y divide-[#f0f0f5] rounded-2xl border border-[#ececf2] px-4 text-left">
-              <Row label="Token">
-                <span className="tabular-nums">#{result.onChain?.tokenId}</span>
-              </Row>
-              {result.onChain?.txHash && (
-                <Row label="Transaction">
-                  <span className="tabular-nums">{shortAddress(result.onChain.txHash)}</span>
-                </Row>
-              )}
-            </div>
             <div className="mt-6 space-y-2.5">
               <Button onClick={onClose} showIcon={false}>
-                View your certificate
+                {result?.status === 'minted' ? 'View your certificate' : 'Done'}
               </Button>
-              {txUrl && (
-                <a
-                  href={txUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-[#e4d6fb] bg-[#f6f0fe] text-[15px] font-medium text-[#7c2ae8] transition hover:bg-[#efe5fd]"
-                >
-                  View on {explorerName(txUrl)} <Arrow dir="up-right" />
-                </a>
-              )}
+              {explorerLink('View on')}
             </div>
           </div>
         )}
@@ -287,20 +296,11 @@ export function MintDialog({
               Still confirming
             </h2>
             <p className="mx-auto mt-2 max-w-sm text-[13px] leading-6 text-[#5f5f7a]">
-              The network is slower than usual. Your mint is on its way; you can close this and your certificate
-              will show as minted once it’s confirmed.
+              The network is slower than usual. Your claim is on its way; you can close this and this page will
+              update once it’s confirmed.
             </p>
             <div className="mt-6 space-y-2.5">
-              {txUrl && (
-                <a
-                  href={txUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-[#e4d6fb] bg-[#f6f0fe] text-[15px] font-medium text-[#7c2ae8] transition hover:bg-[#efe5fd]"
-                >
-                  Track it on {explorerName(txUrl)} <Arrow dir="up-right" />
-                </a>
-              )}
+              {explorerLink('Track it on')}
               <Button onClick={onClose} showIcon={false}>
                 Close
               </Button>
@@ -311,13 +311,13 @@ export function MintDialog({
         {step === 'error' && (
           <div className="text-center">
             <h2 id="mint-title" className="text-[20px] font-medium tracking-tight text-[#171730]">
-              Couldn’t mint your certificate
+              Couldn’t complete the claim
             </h2>
             <p className="mx-auto mt-2 max-w-sm text-[13px] leading-6 text-[#5f5f7a]">
-              {error || 'Something went wrong. Nothing was charged; you can try again.'}
+              {error || 'Something went wrong. Nothing was claimed; you can try again.'}
             </p>
             <div className="mt-6 space-y-2.5">
-              <Button onClick={mint} showIcon={false}>
+              <Button onClick={claim} showIcon={false}>
                 Try again
               </Button>
               <button type="button" onClick={onClose} className="link-cta text-[12.5px] font-medium text-[#5f5f7a]">

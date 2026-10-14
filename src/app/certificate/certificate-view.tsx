@@ -312,10 +312,10 @@ export default function CertificateView() {
                 </>
               ) : cert.onChain?.enabled && cert.mint?.pending ? (
                 <>
-                  <h3 className="text-[15px] font-medium text-[#171730]">Minting your certificate…</h3>
+                  <h3 className="text-[15px] font-medium text-[#171730]">Claiming…</h3>
                   <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
-                    It’s been sent to {cert.onChain.network} and is waiting to be confirmed. This page updates once
-                    it’s in your wallet.
+                    Your claim was sent to {cert.onChain.network} and is waiting to be confirmed. This page updates
+                    once it’s in your wallet.
                   </p>
                   <Button showIcon={false} onClick={() => setMinting('watch')}>
                     View progress
@@ -324,14 +324,23 @@ export default function CertificateView() {
               ) : cert.onChain?.enabled ? (
                 <>
                   <h3 className="text-[15px] font-medium text-[#171730]">
-                    {cert.status === 'locked' ? 'Mint once it’s unlocked' : 'Mint your certificate'}
+                    {cert.claimable?.capstone
+                      ? 'Claim your certificate'
+                      : (cert.claimable?.moduleIds.length ?? 0) > 0
+                        ? `Claim your badges (${cert.claimable!.moduleIds.length})`
+                        : cert.status === 'locked'
+                          ? 'Claim once it’s unlocked'
+                          : 'Claim your certificate'}
                   </h3>
                   <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
-                    Your certificate and badges are written to {cert.onChain.network} as soulbound tokens in your
-                    wallet: permanent, and gas is covered by Si Her DAO.
+                    {cert.claimable?.capstone || cert.status !== 'locked'
+                      ? 'Your certificate and badges'
+                      : 'The badges you’ve earned'}{' '}
+                    go to your wallet on {cert.onChain.network} as soulbound tokens: permanent and verifiable. You
+                    confirm the claim in your wallet and pay the network fee.
                   </p>
                   <div className="flex items-center justify-between rounded-xl border border-[#ececf2] bg-[#f9fafc] px-3 py-2 text-[11px]">
-                    <span className="text-[#8e8ea6] font-medium text-[11px]">Mints to</span>
+                    <span className="text-[#8e8ea6] font-medium text-[11px]">Claims to</span>
                     {cert.walletAddress ? (
                       <span className="tabular-nums text-[#171730]">{shortAddress(cert.walletAddress)}</span>
                     ) : (
@@ -346,15 +355,18 @@ export default function CertificateView() {
                     </p>
                   )}
                   <Button disabled={!cert.canMint} showIcon={false} onClick={() => setMinting('new')}>
-                    Mint on {cert.onChain.network}
+                    Claim on {cert.onChain.network}
                   </Button>
+                  {cert.status !== 'locked' && cert.claimable && !cert.claimable.capstone && cert.claimable.moduleIds.length === 0 && (
+                    <p className="text-[11px] text-[#8e8ea6]">Everything you’ve earned is already in your wallet.</p>
+                  )}
                 </>
               ) : (
                 <>
                   <h3 className="text-[15px] font-medium text-[#171730]">Minting opens soon</h3>
                   <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
                     Your certificate will be written on-chain as a soulbound token in your wallet —
-                    permanent, and gas is covered by Si Her DAO. We’ll let you know when minting
+                    permanent and verifiable. We’ll let you know when claiming
                     opens.
                   </p>
                   <div className="flex items-center justify-between rounded-xl border border-[#ececf2] bg-[#f9fafc] px-3 py-2 text-[11px]">

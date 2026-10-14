@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { createAppKit } from "@reown/appkit/react";
 import { WagmiProvider } from "wagmi";
-import { base } from "@reown/appkit/networks";
+import { base, baseSepolia, sepolia } from "@reown/appkit/networks";
 import type { AppKitNetwork } from "@reown/appkit/networks";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
@@ -29,10 +29,9 @@ export const metadata = {
   icons: ["https://avatars.githubusercontent.com/u/179229932"],
 };
 
-// 3. Supported networks (Base as primary network)
-export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [
-  base
-];
+// 3. Supported networks: Base is the primary network; the testnets let learners
+//    claim badges from a test deployment of the badges contract
+export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [base, sepolia, baseSepolia];
 
 // 4. Create Wagmi Adapter
 export const wagmiAdapter = new WagmiAdapter({

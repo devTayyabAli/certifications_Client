@@ -93,13 +93,13 @@ export default function Part2Page() {
           <div className="space-y-4 lg:col-span-5">
             <div className="rounded-2xl border border-[#ececf2] bg-white p-6 space-y-4">
               <p className="text-[12.5px] font-medium text-[#16a34a]">Onboarding · 2 of 2 complete</p>
-              <h2 className="text-[20px] font-medium tracking-tight text-[#171730]">Mint your certificate</h2>
-              <p className="text-[13px] leading-6 text-[#5f5f7a]">It becomes a soulbound token in your wallet: permanent, verifiable, and gas is covered by Si Her DAO.</p>
+              <h2 className="text-[20px] font-medium tracking-tight text-[#171730]">Claim your certificate</h2>
+              <p className="text-[13px] leading-6 text-[#5f5f7a]">It goes to your wallet as a soulbound token: permanent and verifiable. You confirm the claim in your wallet and pay the network fee.</p>
               <div className="divide-y divide-[#f0f0f5] rounded-xl border border-[#ececf2] px-4 text-[13px]">
                 <div className="flex justify-between py-2.5"><span className="text-[#8e8ea6]">Badges</span><span className="font-medium text-[#171730]">{badges ? `${badges.earnedCount} of ${badges.totalCohortBadges}` : '—'}</span></div>
-                <div className="flex justify-between py-2.5"><span className="text-[#8e8ea6]">Network</span><span className="inline-flex items-center gap-1.5 font-medium text-[#171730]"><span className="size-2 rounded-full bg-[#0052ff]" />Base</span></div>
+                <div className="flex justify-between py-2.5"><span className="text-[#8e8ea6]">Network</span><span className="inline-flex items-center gap-1.5 font-medium text-[#171730]"><span className="size-2 rounded-full bg-[#0052ff]" />{cert?.onChain?.network || "Base"}</span></div>
               </div>
-              <ButtonLink href="/certificate?mint=1">Mint your certificate</ButtonLink>
+              <ButtonLink href="/certificate?mint=1">Claim your certificate</ButtonLink>
               <div className="text-center"><Link href="/dashboard" className="link-cta text-[12.5px] font-medium text-[#5f5f7a]">Back to dashboard</Link></div>
             </div>
           </div>
