@@ -555,6 +555,13 @@ export interface CertificateData {
   stillOpen: { week: number; title: string; slug: string }[];
   onChain: CertificateOnChain;
   canMint: boolean;
+  /** an on-chain mint in flight (poll until status is "minted"), or why the last one failed */
+  mint?: {
+    pending: boolean;
+    error: string | null;
+    txHash: string | null;
+    explorerUrl: string | null;
+  };
 }
 
 /** What anyone with the code sees on the public verification page. */

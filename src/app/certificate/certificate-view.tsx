@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { AppShell } from '@/components/app/AppShell';
 import { CertificateArt } from '@/components/certificate/CertificateArt';
+import { MintDialog, explorerName } from '@/components/certificate/MintDialog';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Arrow } from '@/components/ui/Arrow';
 import { Check } from '@/components/ui/Check';
@@ -30,6 +31,9 @@ export default function CertificateView() {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // the mint dialog: 'new' starts a mint, 'watch' follows one already in flight
+  const [minting, setMinting] = useState<'new' | 'watch' | null>(null);
+  const autoOpened = useRef(false);
   const art = useRef<HTMLDivElement>(null);
 
   const load = () => {
@@ -48,6 +52,12 @@ export default function CertificateView() {
         setTitles(Object.fromEntries(ms.map((m) => [m.week, m.title])));
         moduleCompletedStore.set(c.status !== 'locked');
         certificateMintedStore.set(c.status === 'minted');
+        // ?mint=1 (from Part 2 or the dashboard) opens the mint straight away, once
+        if (!autoOpened.current && new URLSearchParams(window.location.search).get('mint') === '1') {
+          autoOpened.current = true;
+          if (c.mint?.pending) setMinting('watch');
+          else if (c.canMint) setMinting('new');
+        }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -266,7 +276,7 @@ export default function CertificateView() {
             )}
 
             <div className={card}>
-              <span className="text-[11px] font-medium text-[#7c2ae8]">On Base</span>
+              <span className="text-[11px] font-medium text-[#7c2ae8]">On {cert.onChain?.network || 'Base'}</span>
               {minted && cert.onChain ? (
                 <>
                   <h3 className="text-[15px] font-medium text-[#171730]">
@@ -295,16 +305,55 @@ export default function CertificateView() {
                       rel="noopener noreferrer"
                       className={`${secondary} inline-flex items-center justify-center gap-1.5`}
                     >
-                      <span>View on BaseScan</span>
+                      <span>View on {explorerName(cert.onChain.explorerUrl)}</span>
                       <Arrow dir="up-right" />
                     </a>
                   )}
+                </>
+              ) : cert.onChain?.enabled && cert.mint?.pending ? (
+                <>
+                  <h3 className="text-[15px] font-medium text-[#171730]">Minting your certificate…</h3>
+                  <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
+                    It’s been sent to {cert.onChain.network} and is waiting to be confirmed. This page updates once
+                    it’s in your wallet.
+                  </p>
+                  <Button showIcon={false} onClick={() => setMinting('watch')}>
+                    View progress
+                  </Button>
+                </>
+              ) : cert.onChain?.enabled ? (
+                <>
+                  <h3 className="text-[15px] font-medium text-[#171730]">
+                    {cert.status === 'locked' ? 'Mint once it’s unlocked' : 'Mint your certificate'}
+                  </h3>
+                  <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
+                    Your certificate and badges are written to {cert.onChain.network} as soulbound tokens in your
+                    wallet: permanent, and gas is covered by Si Her DAO.
+                  </p>
+                  <div className="flex items-center justify-between rounded-xl border border-[#ececf2] bg-[#f9fafc] px-3 py-2 text-[11px]">
+                    <span className="text-[#8e8ea6] font-medium text-[11px]">Mints to</span>
+                    {cert.walletAddress ? (
+                      <span className="tabular-nums text-[#171730]">{shortAddress(cert.walletAddress)}</span>
+                    ) : (
+                      <Link href="/wallet" className="font-medium text-[#7c2ae8] link-cta">
+                        Connect a wallet
+                      </Link>
+                    )}
+                  </div>
+                  {cert.mint?.error && (
+                    <p role="alert" className="text-[11.5px] leading-relaxed text-red-500">
+                      Last attempt didn’t go through: {cert.mint.error}
+                    </p>
+                  )}
+                  <Button disabled={!cert.canMint} showIcon={false} onClick={() => setMinting('new')}>
+                    Mint on {cert.onChain.network}
+                  </Button>
                 </>
               ) : (
                 <>
                   <h3 className="text-[15px] font-medium text-[#171730]">Minting opens soon</h3>
                   <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
-                    Your certificate will be written to Base as a soulbound token in your wallet —
+                    Your certificate will be written on-chain as a soulbound token in your wallet —
                     permanent, and gas is covered by Si Her DAO. We’ll let you know when minting
                     opens.
                   </p>
@@ -349,6 +398,20 @@ export default function CertificateView() {
           </div>
         </div>
       </div>
+      {minting && (
+        <MintDialog
+          cert={cert}
+          startNow={minting === 'watch'}
+          onClose={() => {
+            setMinting(null);
+            load();
+          }}
+          onMinted={(c) => {
+            setCert(c);
+            certificateMintedStore.set(true);
+          }}
+        />
+      )}
     </AppShell>
   );
 }
