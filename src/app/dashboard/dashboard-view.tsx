@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, Avatar } from "@/components/app/AppShell";
 import { ScheduleModal } from "@/components/dashboard/ScheduleModal";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -33,6 +33,8 @@ import { firstName, sessionWhen, shortAddress, tagCase, titleCase } from "@/lib/
 
 const TOTAL_BADGES = 12;
 const SESSIONS_STEP = 3;
+/** partner cards shown before "Show all partners": two rows of three */
+const PARTNERS_STEP = 6;
 const sectionTitle = "text-[17px] font-medium tracking-[-0.01em] text-[#45465f]";
 
 const CalendarIcon = ({
@@ -786,6 +788,37 @@ const domain = (url: string) => {
   }
 };
 
+/** Four lines of a long description, then "Read more", so partner cards in a row stay a similar height. */
+function ClampedText({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (el && !open) setLong(el.scrollHeight > el.clientHeight + 1);
+  }, [text, open]);
+  return (
+    <>
+      <p
+        ref={ref}
+        className={`whitespace-pre-line break-words text-[12.5px] leading-5 text-[#5f5f7a] ${open ? "" : "line-clamp-4"}`}
+      >
+        {text}
+      </p>
+      {(long || open) && (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="link-cta mt-1 text-[12px] font-medium text-[#7c2ae8]"
+        >
+          {open ? "Show less" : "Read more"}
+        </button>
+      )}
+    </>
+  );
+}
+
 function PartnerCard({ p }: { p: PartnerItem }) {
   const referral = /referral/i.test(p.footerText);
   return (
@@ -800,15 +833,24 @@ function PartnerCard({ p }: { p: PartnerItem }) {
             PARTNER_MARK[p.id] ?? <span className="text-[14px] font-medium text-[#151534]">{p.title.charAt(0)}</span>
           )}
         </div>
-        <span className="shrink-0 rounded-full bg-[#f4effe] px-2.5 py-1 text-[11.5px] font-medium text-[#7c2ae8]">
-          {titleCase(p.tag)}
-        </span>
+        {p.tag?.trim() && (
+          <span className="shrink-0 rounded-full bg-[#f4effe] px-2.5 py-1 text-[11.5px] font-medium text-[#7c2ae8]">
+            {titleCase(p.tag)}
+          </span>
+        )}
       </div>
       <h3 className="mt-4 text-[15px] font-medium text-[#151534]">{p.title}</h3>
-      <p className="mt-1 flex-1 text-[12.5px] leading-5 text-[#5f5f7a]">{p.description}</p>
-      <ButtonLink href={p.actionUrl ?? "#"} external className="mt-5">
-        {p.actionText.replace(/\s*↗\s*$/, "")}
-      </ButtonLink>
+      <div className="mt-1 flex-1">{p.description && <ClampedText text={p.description} />}</div>
+      {p.actionUrl ? (
+        <ButtonLink href={p.actionUrl} external className="mt-5">
+          {p.actionText.replace(/\s*↗\s*$/, "")}
+        </ButtonLink>
+      ) : (
+        // no link in the CMS yet: shown, but not a dead button
+        <ButtonLink href="#" disabled showIcon={false} title="Link coming soon" className="mt-5">
+          {p.actionText.replace(/\s*↗\s*$/, "")}
+        </ButtonLink>
+      )}
       <div className="mt-3 flex items-center justify-between gap-2 text-[11.5px] text-[#9a9cbd]">
         {p.actionUrl ? (
           // the partner's site, same place as the button, in a new tab
@@ -857,6 +899,7 @@ function DashboardContent() {
   const [partners, setPartners] = useState<PartnerItem[]>([]);
   const [scheduling, setScheduling] = useState<ModuleItem | null>(null);
   const [shown, setShown] = useState(SESSIONS_STEP);
+  const [allPartners, setAllPartners] = useState(false);
   const [events, setEvents] = useState<CohortEvent[]>([]);
   const [partnersCopy, setPartnersCopy] = useState<PartnersCopy>(PARTNERS_COPY_DEFAULTS);
   const [loading, setLoading] = useState(true);
@@ -1167,10 +1210,36 @@ function DashboardContent() {
               )}
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {partners.map((p) => (
+              {(allPartners ? partners : partners.slice(0, PARTNERS_STEP)).map((p) => (
                 <PartnerCard key={p.id} p={p} />
               ))}
             </div>
+            {/* two rows of three; beyond that, the rest open on request (like the sessions list) */}
+            {partners.length > PARTNERS_STEP && (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setAllPartners((v) => !v)}
+                  aria-expanded={allPartners}
+                  className={
+                    allPartners
+                      ? "inline-flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-medium text-[#7e7e96] transition hover:text-[#151534]"
+                      : "inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#e2e2ec] bg-white px-4 py-2 text-[12.5px] font-medium text-[#45465f] transition hover:border-[#d4c2f5] hover:text-[#7c2ae8]"
+                  }
+                >
+                  {allPartners ? (
+                    "Show fewer"
+                  ) : (
+                    <>
+                      Show all partners <span className="text-[#9a9cbd]">({partners.length - PARTNERS_STEP} more)</span>
+                    </>
+                  )}
+                  <svg viewBox="0 0 16 16" aria-hidden="true" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={allPartners ? "M4 10l4-4 4 4" : "M4 6l4 4 4-4"} />
+                  </svg>
+                </button>
+              </div>
+            )}
             {partners.some((p) => /referral/i.test(p.footerText)) && (
               <p className="text-[11.5px] text-[#9a9cbd]">{partnersCopy.referralNote}</p>
             )}
