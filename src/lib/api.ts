@@ -583,37 +583,10 @@ export const certificateApi = {
    * Soulbound mint on Base to the connected wallet (gas covered by Si Her DAO)
    */
   async mint() {
+    // A certificate only ever shows as minted once the server has the real
+    // on-chain record; a failure surfaces as an error, never a stand-in result
     return request<CertificateData>("/certificate/mint", {
       method: "POST",
-    }).catch(() => {
-      return {
-        certificateId: "cert_live_sim",
-        verificationCode: "SI3-HER-2026-8842",
-        recipientName: "Learner",
-        nameHidden: false,
-        status: "minted" as const,
-        issuedAt: new Date().toISOString(),
-        content: {
-          cohortLabel: "Cohort 01",
-          courseTitle: "Si Her DeFi Certification",
-          organizationName: "Si Her DeFi",
-        },
-        badges: [],
-        totalBadges: 7,
-        onChain: {
-          tokenId: "0042",
-          contractAddress: "0x38b29c9f02938472910283920192847291028394",
-          txHash: "0x8f19283746592019284756102938475610293847561029384756102938475610",
-          network: "base",
-          blockExplorerUrl: "https://basescan.org/tx/0x8f19283746592019284756102938475610293847561029384756102938475610",
-          explorerUrl: "https://basescan.org/tx/0x8f19283746592019284756102938475610293847561029384756102938475610",
-        },
-        walletAddress: null,
-        verifyUrl: "https://si3.space/verify",
-        unlockModule: null,
-        stillOpen: [],
-        canMint: false,
-      } as unknown as CertificateData;
     });
   },
 };
@@ -795,11 +768,29 @@ export interface MoreWaysContent {
   cards: { id: string; title: string; description: string; linkText: string; linkUrl: string | null }[];
 }
 
+export interface PartnersCopy {
+  heading: string;
+  subheading: string;
+  referralNote: string;
+}
+
+/** Shown until the CMS copy loads, and if it can't be loaded. */
+export const PARTNERS_COPY_DEFAULTS: PartnersCopy = {
+  heading: "From our partners",
+  subheading: "",
+  referralNote: "Si Her DAO may earn a referral fee from links marked “Referral link”.",
+};
+
 export const partnerApi = {
   async getPartners() {
     return request<PartnerItem[]>("/partners", {
       method: "GET",
     });
+  },
+
+  /** Heading, subtitle and referral note around the partner cards (edited in the CMS → Partners). */
+  async getCopy() {
+    return request<PartnersCopy>("/partners/copy", { method: "GET" });
   },
 
   /** null when the team hasn't set the banner up (it is then hidden) */
@@ -930,66 +921,28 @@ export const onboardApi = {
    * Part 2 content and saved reflection answers
    */
   async getPart2() {
-    return request<Part2>("/onboard/part2", { method: "GET" }).catch(() => ({
-      unlocked: true,
-      title: "Close out your cohort",
-      subtitle: "Before you mint your certificate, take a few minutes to look back on the cohort and tell us where you’re heading next. Write as much or as little as you like.",
-      questions: [
-        { id: "part2-q-1", question: "What’s the most useful thing you learned in Si Her DeFi?", placeholder: "A concept, a tool, a conversation…", required: true },
-        { id: "part2-q-2", question: "What will you do next with what you learned?", placeholder: "A project, a role, a habit, or a next course.", required: true },
-        { id: "part2-q-3", question: "Anything we should change for the next cohort?", placeholder: "Optional. Honest feedback helps.", required: false },
-      ],
-      progress: {
-        answers: {},
-        completedAt: null,
-      },
-    } as Part2));
+    // Content, whether it's open, and saved answers all come from the server; no
+    // local stand-in, so a learner is never shown it as open or done when it isn't
+    return request<Part2>("/onboard/part2", { method: "GET" });
   },
 
   /**
    * Submit Onboard Part 2 reflection answers
    */
   async submitPart2(answers: Record<string, string>) {
+    // Errors reach the page, so answers are never shown as submitted unless the server saved them
     return request<{ progress: { answers: Record<string, string>; completedAt: string } }>("/onboard/part2", {
       method: "POST",
       body: JSON.stringify({ answers }),
-    }).catch(() => ({
-      progress: {
-        answers,
-        completedAt: new Date().toISOString(),
-      },
-    }));
+    });
   },
 };
 
 export const eventsApi = {
   async getAll() {
-    return request<CohortEvent[]>("/events", { method: "GET" }).catch(() => [
-      {
-        id: "event-proof-of-adoption",
-        kind: "linkedin-live" as const,
-        title: "Proof of Adoption",
-        subtitle: "Driving Real-World Value for Crypto's Next Billion Users",
-        date: "2026-11-18T17:00:00.000Z",
-        timeTba: true,
-        partnerName: "DeFi For Good",
-        speakers: [],
-        link: "https://www.linkedin.com/company/si3-ecosystem/",
-        linkIsPlaceholder: true,
-      },
-      {
-        id: "event-the-capital-table",
-        kind: "linkedin-live" as const,
-        title: "The Capital Table",
-        subtitle: "DeFi's Next Chapter",
-        date: "2026-12-09T17:00:00.000Z",
-        timeTba: true,
-        partnerName: "",
-        speakers: [],
-        link: "https://www.linkedin.com/company/si3-ecosystem/",
-        linkIsPlaceholder: true,
-      },
-    ]);
+    // Events are managed in the CMS; if they can't be loaded, show none rather
+    // than a hardcoded copy that may list changed or deleted events
+    return request<CohortEvent[]>("/events", { method: "GET" }).catch(() => [] as CohortEvent[]);
   },
 };
 

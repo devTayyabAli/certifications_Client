@@ -261,7 +261,7 @@ export default function ProfileForm() {
                     Upload a photo
                   </button>
                   <p className="mt-1 text-[11px] text-[#8e8ea6]">
-                    JPG, PNG or WebP · up to 5 MB · shown on your certificate
+                    JPG, PNG or WebP · up to 5 MB
                   </p>
                 </div>
               </>

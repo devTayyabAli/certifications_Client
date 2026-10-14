@@ -59,7 +59,6 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
 
   const q = questions[index];
   const answered = q ? answers[q.questionNumber] : undefined;
-  const tag = m.partnerName || m.companyTag;
 
   const pick = async (key: 'A' | 'B' | 'C' | 'D') => {
     if (!q || answered || picking) return;
@@ -116,7 +115,7 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
           <img alt="" className="mx-auto my-2 size-[96px] object-contain drop-shadow-[0_12px_24px_rgba(124,42,232,0.35)]" src={result.badgeEarned?.image ?? quiz.badge.image} />
           <h3 id="quiz-result-title" className="mt-4 text-[22px] font-medium text-[#171730]">Badge earned</h3>
           <p className="mx-auto mt-2 max-w-sm text-[13px] leading-relaxed text-[#5f5f7a]">
-            All {word} correct, the week {m.week} badge is yours. {result.certificateUnlocked
+            All {word} correct, the {result.badgeEarned?.name ?? quiz.badge.name ?? 'module badge'} is yours. {result.certificateUnlocked
               ? 'That was the last one: your certificate is unlocked and ready to mint on Base.'
               : 'It’s on your dashboard now, and it counts toward your certificate.'}
           </p>
@@ -146,7 +145,7 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
           You need {result.passingScore} to earn the badge.{' '}
           {result.attemptsRemaining > 0
             ? `You have ${result.attemptsRemaining} attempt${result.attemptsRemaining === 1 ? '' : 's'} left — rewatch these parts first:`
-            : `That was your last attempt. Rewatch these parts, then you can start over or skip this quiz (without the week ${m.week} badge) from the module page.`}
+            : `That was your last attempt. Rewatch these parts, then you can start over or skip this quiz (without this module’s badge) from the module page.`}
         </p>
         <div className="mt-4 space-y-2">
           {result.review.map((r) => (
@@ -170,7 +169,7 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
   return frame('quiz-question-title', (
     <>
       <div className="flex items-center justify-between gap-3">
-        <span className="truncate rounded-full bg-[#f4effe] px-2.5 py-0.5 text-[11px] font-medium text-[#7c2ae8]">Week {String(m.week).padStart(2, '0')} quiz{tag ? ` · ${tag}` : ''}</span>
+        <span className="truncate rounded-full bg-[#f4effe] px-2.5 py-0.5 text-[11px] font-medium text-[#7c2ae8]">{m.title} quiz</span>
         <span className="shrink-0 text-[11px] font-medium text-[#8e8ea6]">Attempt {attempt} of {quiz.maxAttempts}</span>
       </div>
       <div className="mt-4 flex items-center justify-between gap-3">

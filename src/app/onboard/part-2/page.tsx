@@ -34,14 +34,27 @@ export default function Part2Page() {
   const [celebrateNow, setCelebrateNow] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
   const [titles, setTitles] = useState<Record<number, string>>({});
+  const [loadError, setLoadError] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    onboardApi.getPart2().then((d: Part2) => { setData(d); setAnswers(d.progress.answers); setDone(!!d.progress.completedAt); }).catch(() => {});
+    onboardApi.getPart2().then((d: Part2) => { setData(d); setAnswers(d.progress.answers); setDone(!!d.progress.completedAt); }).catch(() => setLoadError(true));
     badgeApi.getBadges().then((b: any) => setBadges(b)).catch(() => {});
     certificateApi.getCertificate().then((c: any) => setCert(c)).catch(() => {});
     modulesApi.getAll().then((ms: any[]) => setTitles(Object.fromEntries(ms.map((m) => [m.week, m.title])))).catch(() => {});
   }, []);
 
+  if (!data && loadError) {
+    return (
+      <div className="mx-auto grid min-h-[60vh] max-w-md place-items-center text-center">
+        <div className="space-y-3">
+          <p className="text-[16px] font-medium text-[#171730]">We couldn’t load Part 2</p>
+          <p className="text-[12.5px] text-[#5f5f7a]">Please check your connection and try again.</p>
+          <Button size="md" showIcon={false} onClick={() => window.location.reload()}>Try again</Button>
+        </div>
+      </div>
+    );
+  }
   if (!data) return <div className="grid min-h-[60vh] place-items-center text-[#7c2ae8]"><Spinner className="size-6" /></div>;
 
   const back = <Link className="link-cta text-[12px] font-medium text-[#7c2ae8]" href="/dashboard"><Arrow dir="left" /> Back to dashboard</Link>;
@@ -101,11 +114,15 @@ export default function Part2Page() {
     setMissing(empty);
     if (empty.length) { document.getElementById(empty[0])?.focus(); return; }
     setBusy(true);
+    setSubmitError(null);
     try {
       await onboardApi.submitPart2(answers);
       setDone(true);
       setCelebrateNow(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      // answers stay on the page so nothing typed is lost
+      setSubmitError(e instanceof Error && e.message ? e.message : 'We couldn’t save your answers. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -165,6 +182,7 @@ export default function Part2Page() {
         <p className="text-[12.5px] leading-5 text-[#8e8ea6]">{answered} of {data.questions.length} answered · only the SI<span>&lt;3&gt;</span> team reads these.</p>
         <Button onClick={submit} loading={busy} loadingLabel="Submitting" className="sm:w-auto sm:px-8">Finish Part 2</Button>
       </div>
+      {submitError && <p role="alert" className="text-[12.5px] text-red-500">{submitError}</p>}
     </div>
   );
 }

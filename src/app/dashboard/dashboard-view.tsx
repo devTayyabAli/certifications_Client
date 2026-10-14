@@ -20,6 +20,8 @@ import {
   modulesApi,
   onboardApi,
   partnerApi,
+  PARTNERS_COPY_DEFAULTS,
+  type PartnersCopy,
   type BadgesResponse,
   type CertificateData,
   type ModuleItem,
@@ -27,7 +29,7 @@ import {
   type PartnerItem,
 } from "@/lib/api";
 import type { CohortEvent } from "@/lib/types";
-import { firstName, sessionWhen, shortAddress, tagCase } from "@/lib/format";
+import { firstName, sessionWhen, shortAddress, tagCase, titleCase } from "@/lib/format";
 
 const TOTAL_BADGES = 12;
 const SESSIONS_STEP = 3;
@@ -78,7 +80,7 @@ function BadgeSlots({
         return (
           <li
             key={week}
-            title={`Week ${week}: ${m?.title ?? `Week ${week} module`} · ${
+            title={`${m?.title ?? "Upcoming module"} · ${
               got ? "Earned" : week === next ? "Next to earn" : "Not earned yet"
             }`}
             className={`h-2 flex-1 rounded-full transition-colors duration-300 ${
@@ -107,20 +109,20 @@ function ProfileCard({ profile }: { profile: any }) {
             <Avatar src={profile.photoUrl} name={profile.name} className="size-14 border-2 border-white" />
           </span>
           <div className="min-w-0">
-            <h2 className="truncate text-[17px] font-medium leading-tight text-[#151534]">
+            <h2 className="break-words text-[17px] font-medium leading-tight text-[#151534]">
               {profile.name || "Learner"}
             </h2>
-            {meta && <p className="mt-1 truncate text-[13px] text-[#7e7e96]">{meta}</p>}
+            {meta && <p className="mt-1 break-words text-[13px] leading-snug text-[#7e7e96]">{meta}</p>}
           </div>
         </div>
         {profile.bio ? (
-          <p className="mt-4 line-clamp-2 text-[12.5px] leading-5 text-[#5f5f7a]">{profile.bio}</p>
+          <p className="mt-4 whitespace-pre-line break-words text-[12.5px] leading-5 text-[#5f5f7a]">{profile.bio}</p>
         ) : (
           <Link
             href="/settings#profile"
             className="mt-4 block text-[12.5px] leading-5 text-[#9a9cbd] hover:text-[#7c2ae8]"
           >
-            Add a short bio. Partners see it on your profile.
+            Add a short bio. Members can see it on your profile.
           </Link>
         )}
       </div>
@@ -168,8 +170,8 @@ function ProfileCard({ profile }: { profile: any }) {
   );
 }
 
-const PART2_TITLE = "Onboarding Part 2";
-const PART2_LOCKED = "Opens later in the cohort. We’ll let you know when it’s ready.";
+const PART2_TITLE = "Close out your cohort";
+const PART2_LOCKED = "Opens once you’ve finished every session and its quiz.";
 
 function StartHere({ status }: { status: OnboardStatusResponse }) {
   const defaultCard = {
@@ -224,19 +226,53 @@ function StartHere({ status }: { status: OnboardStatusResponse }) {
               Review
             </Link>
           </li>
-          <li className="flex items-center gap-4 p-4 sm:px-5" aria-disabled={!status.part2Unlocked}>
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#ece8f4] bg-[#fbfaff] text-[#a894c8]">
-              {lock}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] text-[#a894c8]">Part 2</p>
-              <h3 className="mt-0.5 text-[15px] font-medium text-[#8e8ea6]">{PART2_TITLE}</h3>
-              <p className="mt-0.5 text-[12.5px] leading-5 text-[#8e8ea6]">{PART2_LOCKED}</p>
-            </div>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#f1ecf8] px-2.5 py-1 text-[11.5px] font-medium text-[#8a6fb8]">
-              {lock}Locked
-            </span>
-          </li>
+          {status.part2Done ? (
+            <li className="flex items-center gap-4 p-4 sm:px-5">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#ecfdf3] text-[#16a34a]">
+                <Check className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] text-[#16a34a]">Part 2 · Done</p>
+                <h3 className="mt-0.5 text-[15px] font-medium text-[#151534]">{PART2_TITLE}</h3>
+                <p className="mt-0.5 text-[12.5px] leading-5 text-[#5f5f7a]">Thank you for closing out the cohort.</p>
+              </div>
+              <Link href="/onboard/part-2" className="link-cta shrink-0 text-[12.5px] font-medium text-[#7c2ae8]">
+                Review
+              </Link>
+            </li>
+          ) : status.part2Unlocked ? (
+            <li className="flex flex-col gap-4 bg-[#fbf9ff] p-4 sm:flex-row sm:items-center sm:px-5">
+              <div className="flex min-w-0 flex-1 items-center gap-4">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#f4effe] text-[13px] font-medium text-[#7c2ae8]">
+                  2
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[12px] text-[#7c2ae8]">Part 2 · Open now</p>
+                  <h3 className="mt-0.5 text-[15px] font-medium text-[#151534]">{PART2_TITLE}</h3>
+                  <p className="mt-0.5 text-[12.5px] leading-5 text-[#5f5f7a]">
+                    You’ve finished every session. Close out the cohort in about 5 minutes.
+                  </p>
+                </div>
+              </div>
+              <ButtonLink href="/onboard/part-2" size="md" className="shrink-0 max-sm:w-full">
+                Start Part 2
+              </ButtonLink>
+            </li>
+          ) : (
+            <li className="flex items-center gap-4 p-4 sm:px-5" aria-disabled="true">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#ece8f4] bg-[#fbfaff] text-[#a894c8]">
+                {lock}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] text-[#a894c8]">Part 2</p>
+                <h3 className="mt-0.5 text-[15px] font-medium text-[#8e8ea6]">{PART2_TITLE}</h3>
+                <p className="mt-0.5 text-[12.5px] leading-5 text-[#8e8ea6]">{PART2_LOCKED}</p>
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#f1ecf8] px-2.5 py-1 text-[11.5px] font-medium text-[#8a6fb8]">
+                {lock}Locked
+              </span>
+            </li>
+          )}
         </ol>
       </div>
     );
@@ -353,14 +389,24 @@ function EventCard({ e }: { e: CohortEvent }) {
           )}
         </div>
       </div>
-      <ButtonLink
-        href={e.link}
-        external
-        size="md"
-        className="shrink-0 max-sm:w-full"
-      >
-        {e.kind === "linkedin-live" ? "Join on LinkedIn" : "Open event"}
-      </ButtonLink>
+      {/* the CMS decides whether the button is live yet and what it says;
+          until registration opens it's a grayed-out "Save the Date" */}
+      {e.ctaActive === false ? (
+        <ButtonLink
+          href={e.link}
+          size="md"
+          disabled
+          showIcon={false}
+          title="Registration opens soon"
+          className="shrink-0 max-sm:w-full"
+        >
+          {e.ctaText || "Save the Date"}
+        </ButtonLink>
+      ) : (
+        <ButtonLink href={e.link} external size="md" className="shrink-0 max-sm:w-full">
+          {e.ctaText || (e.kind === "linkedin-live" ? "Join on LinkedIn" : "Open event")}
+        </ButtonLink>
+      )}
     </div>
   );
 }
@@ -375,8 +421,9 @@ function FeaturedModule({
   onSchedule: (m: ModuleItem) => void;
 }) {
   const upcoming = m.sessionState === "upcoming";
-  // the week's own cover from the CMS; the shared cover only when the CMS has none
-  const cover = m.bannerUrl || m.thumbnailUrl;
+  // the week's own dashboard banner from the CMS; the shared cover when it has none.
+  // (Not the video thumbnail: it has the session title printed on it, which clashes with the card's text.)
+  const cover = m.bannerUrl;
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#17142b] via-[#331c4b] to-[#121124] p-6 text-white shadow-md">
       {cover ? (
@@ -395,7 +442,6 @@ function FeaturedModule({
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#131124]/60 to-transparent pointer-events-none sm:hidden" />
       <div className="relative z-10">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-medium text-white">
-          Week {String(m.week).padStart(2, "0")} ·{" "}
           {m.videoUrl ? "Session recording" : "Recording after the live session"}
         </span>
         <h3 className="mt-2 text-[20px] font-medium tracking-tight text-white">{m.title}</h3>
@@ -742,7 +788,7 @@ function PartnerCard({ p }: { p: PartnerItem }) {
           )}
         </div>
         <span className="shrink-0 rounded-full bg-[#f4effe] px-2.5 py-1 text-[11.5px] font-medium text-[#7c2ae8]">
-          {tagCase(p.tag)}
+          {titleCase(p.tag)}
         </span>
       </div>
       <h3 className="mt-4 text-[15px] font-medium text-[#151534]">{p.title}</h3>
@@ -751,7 +797,19 @@ function PartnerCard({ p }: { p: PartnerItem }) {
         {p.actionText.replace(/\s*↗\s*$/, "")}
       </ButtonLink>
       <div className="mt-3 flex items-center justify-between gap-2 text-[11.5px] text-[#9a9cbd]">
-        <span className="truncate">{domain(p.actionUrl ?? "")}</span>
+        {p.actionUrl ? (
+          // the partner's site, same place as the button, in a new tab
+          <a
+            href={p.actionUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="min-w-0 truncate underline-offset-2 transition-colors hover:text-[#7c2ae8] hover:underline"
+          >
+            {domain(p.actionUrl)}
+          </a>
+        ) : (
+          <span className="truncate">{domain("")}</span>
+        )}
         {referral ? (
           <span className="shrink-0" title={p.footerText}>
             Referral link
@@ -787,6 +845,7 @@ function DashboardContent() {
   const [scheduling, setScheduling] = useState<ModuleItem | null>(null);
   const [shown, setShown] = useState(SESSIONS_STEP);
   const [events, setEvents] = useState<CohortEvent[]>([]);
+  const [partnersCopy, setPartnersCopy] = useState<PartnersCopy>(PARTNERS_COPY_DEFAULTS);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -811,6 +870,7 @@ function DashboardContent() {
       if (c.status === "fulfilled") setCert(c.value);
       if (p.status === "fulfilled" && Array.isArray(p.value)) setPartners(p.value);
       eventsApi.getAll().then(setEvents).catch(() => {});
+      partnerApi.getCopy().then(setPartnersCopy).catch(() => {});
     } finally {
       setLoading(false);
     }
@@ -834,22 +894,28 @@ function DashboardContent() {
   const isDone = (m: ModuleItem) => !!m.quiz?.isPassed || !!m.quiz?.isSkipped;
   const featured = modules.find((m) => !isDone(m)) ?? null;
   const rest = modules.filter((m) => m !== featured);
+  const unlocked = !!cert && cert.status !== "locked";
+  // finished sessions sit in their own list under the featured card; the
+  // upcoming list keeps only what's still ahead (until everything is done,
+  // when one "Your sessions" list shows them all)
+  const completed = unlocked ? [] : rest.filter(isDone);
   // sessions + LinkedIn Lives in one list, by date
   type Item = { kind: "module"; at: number; m: ModuleItem } | { kind: "event"; at: number; e: CohortEvent };
   const items: Item[] = [
-    ...rest.map((m) => ({ kind: "module" as const, at: new Date(m.scheduledDate || 0).getTime(), m })),
+    ...rest
+      .filter((m) => unlocked || !isDone(m))
+      .map((m) => ({ kind: "module" as const, at: new Date(m.scheduledDate || 0).getTime(), m })),
     ...events.map((e) => ({ kind: "event" as const, at: new Date(e.date).getTime(), e })),
   ].sort((a, z) => a.at - z.at);
   const earned = badges?.earnedCount ?? 0;
   const earnedBadgeNames = new Set((badges?.badges ?? []).map((b) => b.name));
   const nextBadge = [...modules].sort((x, y) => x.week - y.week).find((m) => !earnedBadgeNames.has(m.badge?.name));
-  const unlocked = !!cert && cert.status !== "locked";
   const subtitle = !status.part1Done
     ? "Introduce yourself to unlock the weekly sessions."
     : unlocked
     ? "You did it. Every session and quiz is done, and your certificate is ready to mint on Base."
     : earned === 0
-    ? `You're in. Watch the Week ${String(featured?.week ?? 1).padStart(2, "0")} session and pass its quiz to earn your first badge.`
+    ? `You're in. Watch ${featured ? `“${featured.title}”` : "the first session"} and pass its quiz to earn your first badge.`
     : `You've earned ${earned} of ${TOTAL_BADGES} badges. Each session and quiz brings you closer to your certificate.`;
 
   return (
@@ -919,7 +985,7 @@ function DashboardContent() {
                 </ul>
               ) : (
                 <p className="mt-3 text-[12.5px] leading-5 text-[#7e7e96]">
-                  Pass each week’s quiz to earn that partner’s badge for your certificate.
+                  Pass each week’s quiz to earn that module’s badge for your certificate.
                 </p>
               )}
             </div>
@@ -947,7 +1013,7 @@ function DashboardContent() {
                   <path d="M8 1.5l5.6 3.25v6.5L8 14.5l-5.6-3.25v-6.5z" />
                 </svg>
                 <span className="min-w-0 truncate">
-                  Next badge: <span className="font-medium text-[#151534]">Week {String(nextBadge.week).padStart(2, "0")} · {nextBadge.title}</span>
+                  Next badge: <span className="font-medium text-[#151534]">{nextBadge.title}</span>
                 </span>
               </p>
             ) : null}
@@ -981,7 +1047,20 @@ function DashboardContent() {
             {featured && (
               <FeaturedModule m={featured} part1Done={status.part1Done} onSchedule={setScheduling} />
             )}
-            <div className="space-y-3 pt-3">
+            {completed.length > 0 && (
+              <div className="space-y-3 pt-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[11.5px] font-medium text-[#9a9cbd]">Completed ({completed.length})</h2>
+                  <span className="text-[11.5px] text-[#9a9cbd]">Rewatch any time</span>
+                </div>
+                <div className="space-y-3">
+                  {completed.map((m) => (
+                    <SessionCard key={m.slug} m={m} onSchedule={setScheduling} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className={`space-y-3 pt-3 ${items.length === 0 ? "hidden" : ""}`}>
               <div className="flex items-center justify-between">
                 <h2 className="text-[11.5px] font-medium text-[#9a9cbd]">
                   {unlocked ? `Your sessions (${items.length})` : `Upcoming sessions (${items.length})`}
@@ -1069,8 +1148,10 @@ function DashboardContent() {
         {partners.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className={sectionTitle}>From our partners</h2>
-              <span className="text-[12.5px] text-[#8e8ea6]">Verified ecosystem partners · open in a new tab</span>
+              <h2 className={sectionTitle}>{partnersCopy.heading}</h2>
+              {partnersCopy.subheading && (
+                <span className="text-[12.5px] text-[#8e8ea6]">{partnersCopy.subheading}</span>
+              )}
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {partners.map((p) => (
@@ -1078,9 +1159,7 @@ function DashboardContent() {
               ))}
             </div>
             {partners.some((p) => /referral/i.test(p.footerText)) && (
-              <p className="text-[11.5px] text-[#9a9cbd]">
-                Si Her DAO may earn a referral fee from links marked “Referral link”.
-              </p>
+              <p className="text-[11.5px] text-[#9a9cbd]">{partnersCopy.referralNote}</p>
             )}
           </section>
         )}

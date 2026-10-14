@@ -46,6 +46,26 @@ export const firstName = (name?: string | null) =>
 
 /** Sentence case for ALL-CAPS labels that arrive from content (e.g. "GET STARTED · SI HER DEFI"),
  *  keeping brand names intact. Mixed-case strings are returned unchanged. */
+/** Brand names keep their own casing whatever case the rest of the text is in. */
+function brandCase(s: string): string {
+  return s
+    .replace(/si her defi/gi, 'Si Her DeFi')
+    .replace(/si<3>/gi, 'SI<3>')
+    .replace(/\bdefi\b/gi, 'DeFi')
+    .replace(/\bbase\b/gi, 'Base');
+}
+
+/**
+ * Title case for short labels like partner tags: "SOCIAL IMPACT" → "Social Impact",
+ * "DEFI SECURITY" → "DeFi Security", "web3 payments" → "Web3 Payments". Text typed in
+ * mixed case in the CMS (e.g. "Self-custody") is kept exactly as written.
+ */
+export function titleCase(s?: string | null): string {
+  if (!s) return '';
+  if (/[a-z]/.test(s) && /[A-Z]/.test(s)) return s;
+  return brandCase(s.toLowerCase().replace(/(^|[\s/&-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase()));
+}
+
 export function tagCase(s?: string | null): string {
   if (!s) return '';
   if (/[a-z]/.test(s)) return s;

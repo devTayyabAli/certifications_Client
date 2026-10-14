@@ -308,6 +308,10 @@ export interface CohortEvent {
   /** where "Join on LinkedIn" goes (the LinkedIn event page) */
   link: string;
   linkIsPlaceholder?: boolean;
+  /** false → the button is grayed out and can't be clicked (e.g. "Save the Date"); set in the CMS */
+  ctaActive?: boolean;
+  /** the button's label, set in the CMS */
+  ctaText?: string;
 }
 
 /** Onboarding Part 2: a short close-out reflection, opens once every session and quiz is done. */

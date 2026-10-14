@@ -239,7 +239,7 @@ function ProfileForm({
             )}
           </div>
           <p className="text-[11px] text-[#8e8ea6]">
-            JPG, PNG or WebP · up to 5 MB · shown on your certificate
+            JPG, PNG or WebP · up to 5 MB
           </p>
         </div>
       </div>
@@ -395,7 +395,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="text-[16px] font-medium text-[#171730]">Profile information</h2>
               <p className="text-[12px] text-[#8e8ea6]">
-                This is how your credentials appear on your on-chain certificate.
+                Your name appears on your certificate. Members see your photo, role and bio on your profile.
               </p>
             </div>
             <span className="self-start rounded-full bg-[#f6f6fa] px-2.5 py-1 text-[11.5px] text-[#5f5f7a]">

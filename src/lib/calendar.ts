@@ -64,9 +64,12 @@ export function formatSessionWindow(session: SessionData): string {
 function eventDetails(session: SessionData, joinLabel: string): string {
   const meetingUrl = sanitizeCalendarUrl(session.meetingUrl);
   const pageUrl = sessionPageUrl(session);
+  const isRoam = meetingUrl?.includes("ro.am");
+  const meetingLabel = isRoam ? "Roam Session Link" : joinLabel;
   return [
     session.description || "Si Her DeFi Cohort Learning Session",
-    meetingUrl ? `${joinLabel}: ${meetingUrl}` : "",
+    session.presenter ? `Presented by: ${session.presenter}` : "",
+    meetingUrl ? `${meetingLabel}: ${meetingUrl}` : "",
     pageUrl ? `Session page: ${pageUrl}` : "",
   ]
     .filter(Boolean)
@@ -189,11 +192,18 @@ export function generateIcsContent(session: SessionData): string {
     ? session.title
     : `Si Her DeFi: ${session.title}`;
 
-  const meetingUrl = sanitizeCalendarUrl(session.meetingUrl) ?? sessionPageUrl(session);
+  const meetingUrl = sanitizeCalendarUrl(session.meetingUrl);
+  const pageUrl = sessionPageUrl(session);
+  const primaryUrl = meetingUrl ?? pageUrl;
+  const isRoam = meetingUrl?.includes("ro.am");
 
   const summary = escapeIcsText(eventTitle);
-  const description = escapeIcsText(eventDetails(session, "Session Meeting Link"));
-  const location = escapeIcsText(session.location || "Si Her DeFi Virtual Stage");
+  const description = escapeIcsText(eventDetails(session, isRoam ? "Roam Session Link" : "Session Meeting Link"));
+  const location = escapeIcsText(
+    meetingUrl
+      ? `${session.location || "Si Her DeFi Virtual Stage"} (${meetingUrl})`
+      : session.location || "Si Her DeFi Virtual Stage"
+  );
 
   const lines = [
     "BEGIN:VCALENDAR",
@@ -211,7 +221,7 @@ export function generateIcsContent(session: SessionData): string {
     `SUMMARY:${summary}`,
     `DESCRIPTION:${description}`,
     `LOCATION:${location}`,
-    ...(meetingUrl ? [`URL:${meetingUrl}`] : []),
+    ...(primaryUrl ? [`URL:${primaryUrl}`] : []),
     "STATUS:CONFIRMED",
     "TRANSP:OPAQUE",
     "SEQUENCE:0",
@@ -236,14 +246,20 @@ export function generateGoogleCalendarUrl(session: SessionData): string {
     ? session.title
     : `Si Her DeFi: ${session.title}`;
 
-  const fullDescription = eventDetails(session, "Join Session");
+  const isRoam = session.meetingUrl?.includes("ro.am");
+  const joinLabel = isRoam ? "Join Roam Session" : "Join Session";
+  const fullDescription = eventDetails(session, joinLabel);
+
+  const locationStr = session.meetingUrl
+    ? `${session.location || "Si Her DeFi Virtual Stage"} (${session.meetingUrl})`
+    : session.location || "Si Her DeFi Virtual Stage";
 
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: eventTitle,
     dates: `${formatCalendarUtcDate(start)}/${formatCalendarUtcDate(end)}`,
     details: fullDescription,
-    location: session.location || "Si Her DeFi Virtual Stage",
+    location: locationStr,
   });
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
@@ -258,7 +274,13 @@ export function generateOutlookCalendarUrl(session: SessionData): string {
     ? session.title
     : `Si Her DeFi: ${session.title}`;
 
-  const fullDescription = eventDetails(session, "Join Session");
+  const isRoam = session.meetingUrl?.includes("ro.am");
+  const joinLabel = isRoam ? "Join Roam Session" : "Join Session";
+  const fullDescription = eventDetails(session, joinLabel);
+
+  const locationStr = session.meetingUrl
+    ? `${session.location || "Si Her DeFi Virtual Stage"} (${session.meetingUrl})`
+    : session.location || "Si Her DeFi Virtual Stage";
 
   const params = new URLSearchParams({
     path: "/calendar/action/compose",
@@ -267,7 +289,7 @@ export function generateOutlookCalendarUrl(session: SessionData): string {
     startdt: start.toISOString(),
     enddt: end.toISOString(),
     body: fullDescription,
-    location: session.location || "Si Her DeFi Virtual Stage",
+    location: locationStr,
   });
 
   return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
@@ -282,7 +304,13 @@ export function generateOffice365CalendarUrl(session: SessionData): string {
     ? session.title
     : `Si Her DeFi: ${session.title}`;
 
-  const fullDescription = eventDetails(session, "Join Session");
+  const isRoam = session.meetingUrl?.includes("ro.am");
+  const joinLabel = isRoam ? "Join Roam Session" : "Join Session";
+  const fullDescription = eventDetails(session, joinLabel);
+
+  const locationStr = session.meetingUrl
+    ? `${session.location || "Si Her DeFi Virtual Stage"} (${session.meetingUrl})`
+    : session.location || "Si Her DeFi Virtual Stage";
 
   const params = new URLSearchParams({
     path: "/calendar/action/compose",
@@ -291,7 +319,7 @@ export function generateOffice365CalendarUrl(session: SessionData): string {
     startdt: start.toISOString(),
     enddt: end.toISOString(),
     body: fullDescription,
-    location: session.location || "Si Her DeFi Virtual Stage",
+    location: locationStr,
   });
 
   return `https://outlook.office.com/calendar/0/deeplink/compose?${params.toString()}`;
@@ -328,12 +356,16 @@ export async function copyEventDetails(session: SessionData): Promise<boolean> {
   });
 
   const timeStr = `${start.toLocaleTimeString([], {
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
-  })} - ${end.toLocaleTimeString([], {
-    hour: "2-digit",
+  })} – ${end.toLocaleTimeString([], {
+    hour: "numeric",
     minute: "2-digit",
   })}`;
+
+  const meetingUrl = sanitizeCalendarUrl(session.meetingUrl);
+  const isRoam = meetingUrl?.includes("ro.am");
+  const roamLabel = isRoam ? "🔗 Roam Session Link" : "🔗 Join Session Link";
 
   const text = [
     `Si Her DeFi: ${session.title}`,
@@ -341,17 +373,60 @@ export async function copyEventDetails(session: SessionData): Promise<boolean> {
     `⏰ Time: ${timeStr} (${localTimeZone()})`,
     `📍 Location: ${session.location || "Si Her DeFi Virtual Stage"}`,
     session.presenter ? `🎙️ Presenter: ${session.presenter}` : "",
-    session.description ? `ℹ️ Description: ${session.description}` : "",
-    session.meetingUrl ? `🔗 Join: ${session.meetingUrl}` : "",
+    meetingUrl
+      ? `${roamLabel}: ${meetingUrl}`
+      : sessionPageUrl(session)
+        ? `🔗 Roam Session Link: Available at session page before start`
+        : "",
     sessionPageUrl(session) ? `🌐 Session page: ${sessionPageUrl(session)}` : "",
+    session.description ? `\nℹ️ Description:\n${session.description}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 
   try {
-    await navigator.clipboard.writeText(text);
-    return true;
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
+}
+
+/**
+ * Convert a backend ModuleItem or prototype Module to SessionData
+ */
+export function moduleToSessionData(m: {
+  id?: string;
+  slug?: string;
+  title: string;
+  week?: number;
+  dateLabel?: string;
+  scheduledDate?: string | Date | null;
+  endDate?: string | Date | null;
+  location?: string;
+  description?: string;
+  liveLink?: string | null;
+  meetingUrl?: string | null;
+  presenter?: string;
+  speakers?: Array<{ name: string; companyName?: string }>;
+}): SessionData {
+  const speakerNames = m.speakers?.length
+    ? m.speakers.map((s) => s.name).join(", ")
+    : m.presenter || "";
+
+  return {
+    id: m.id || m.slug || "session",
+    slug: m.slug,
+    title: m.title,
+    dateLabel: m.dateLabel,
+    startDate: m.scheduledDate || undefined,
+    endDate: m.endDate || undefined,
+    location: m.location || "Si Her DeFi Virtual Stage",
+    description: m.description,
+    meetingUrl: m.liveLink || m.meetingUrl || undefined,
+    presenter: speakerNames,
+  };
 }

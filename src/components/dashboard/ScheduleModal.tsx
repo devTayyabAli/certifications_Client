@@ -5,6 +5,15 @@ import { modulesApi, type ModuleItem } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { sessionRange, tz } from '@/lib/format';
 import { Check } from '@/components/ui/Check';
+import {
+  copyEventDetails,
+  downloadIcsFile,
+  generateGoogleCalendarUrl,
+  generateOutlookCalendarUrl,
+  moduleIcsUrl,
+  moduleToSessionData,
+  PROTON_CALENDAR_URL,
+} from '@/lib/calendar';
 
 type Provider = 'google' | 'apple' | 'outlook' | 'proton' | 'other';
 const CTA: Record<Provider, string> = {
@@ -14,32 +23,6 @@ const CTA: Record<Provider, string> = {
   proton: 'Add to Proton Calendar',
   other: 'Download .ics file',
 };
-
-const stamp = (iso: string) =>
-  new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-
-function icsFile(m: ModuleItem) {
-  return [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Si Her DeFi//EN',
-    'BEGIN:VEVENT',
-    `UID:${m.slug}@siherdefi`,
-    `DTSTAMP:${stamp(new Date().toISOString())}`,
-    `DTSTART:${stamp(m.scheduledDate || new Date().toISOString())}`,
-    `DTEND:${stamp(m.endDate || new Date().toISOString())}`,
-    `SUMMARY:${m.title} — Si Her DeFi`,
-    `DESCRIPTION:${m.description}`,
-    `LOCATION:${m.liveLink || m.location}`,
-    'BEGIN:VALARM',
-    'TRIGGER:-PT15M',
-    'ACTION:DISPLAY',
-    'DESCRIPTION:Reminder',
-    'END:VALARM',
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].join('\r\n');
-}
 
 function Option({
   id,
@@ -115,28 +98,43 @@ export function ScheduleModal({
     return () => document.removeEventListener('keydown', esc);
   }, [onClose]);
 
-  const details = `${m.title} — Si Her DeFi\n${m.dateLabel}\n${m.liveLink || m.location}`;
+  const sessionData = moduleToSessionData(m);
+
+  const handleCopy = async () => {
+    const success = await copyEventDetails(sessionData);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const add = async () => {
     setBusy(true);
     try {
       await modulesApi.schedule(m.slug, provider);
       if (provider === 'google') {
-        const start = m.scheduledDate ? stamp(m.scheduledDate) : '';
-        const end = m.endDate ? stamp(m.endDate) : '';
-        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
-          `${m.title} — Si Her DeFi`
-        )}&dates=${start}/${end}&details=${encodeURIComponent(
-          m.description
-        )}&location=${encodeURIComponent(m.liveLink || m.location || '')}`;
+        const url = generateGoogleCalendarUrl(sessionData);
         window.open(url, '_blank', 'noopener');
+      } else if (provider === 'outlook') {
+        const url = generateOutlookCalendarUrl(sessionData);
+        window.open(url, '_blank', 'noopener');
+      } else if (provider === 'proton') {
+        window.open(PROTON_CALENDAR_URL, '_blank', 'noopener');
+        downloadIcsFile(sessionData, `${m.slug}-proton.ics`);
+      } else if (provider === 'apple') {
+        const url = moduleIcsUrl(sessionData);
+        if (url) {
+          const a = document.createElement('a');
+          a.href = url;
+          a.rel = 'noopener';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } else {
+          downloadIcsFile(sessionData, `${m.slug}-apple.ics`);
+        }
       } else {
-        const blob = new Blob([icsFile(m)], { type: 'text/calendar' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${m.slug}.ics`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        downloadIcsFile(sessionData, `${m.slug}.ics`);
       }
       onScheduled?.(m);
       onClose();
@@ -187,6 +185,19 @@ export function ScheduleModal({
           <p className="mt-2 text-[12px] leading-relaxed text-[#5f5f7a]">
             Add this live cohort session to your calendar. You’ll get a reminder 15 minutes before it starts.
           </p>
+          {m.liveLink ? (
+            <div className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-[#e4e4ed] bg-[#f9fafc] px-2.5 py-1.5 text-[11px] text-[#5f5f7a]">
+              <span className="font-semibold text-[#7c2ae8]">🔗 Roam Link:</span>
+              <a
+                href={m.liveLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate font-mono text-[#171730] underline hover:text-[#7c2ae8]"
+              >
+                {m.liveLink}
+              </a>
+            </div>
+          ) : null}
         </div>
         <div className="mt-4.5 space-y-2.5">
           <Option
@@ -254,11 +265,7 @@ export function ScheduleModal({
         <div className="mt-3 flex items-center justify-between px-1">
           <button
             type="button"
-            onClick={async () => {
-              await navigator.clipboard?.writeText(details).catch(() => {});
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1600);
-            }}
+            onClick={handleCopy}
             className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[#7c2ae8] hover:text-[#5e19b5] transition cursor-pointer"
           >
             <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

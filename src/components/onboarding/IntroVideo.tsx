@@ -2,6 +2,7 @@
 // Kara's intro video with watch tracking. Uses YouTube IFrame API to count seconds played (skipping ahead doesn't count),
 // and calls onProgress / onWatched once 80% is reached.
 import { useEffect, useRef } from 'react';
+import { VideoPlayer } from '@/components/module/VideoPlayer';
 
 export const WATCH_THRESHOLD = 0.8;
 
@@ -24,14 +25,55 @@ function loadApi(): Promise<YTNamespace> {
 
 export const youtubeId = (url: string) => url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/)?.[1] ?? null;
 
-export function IntroVideo({ url, title, watched, onProgress, onWatched }: {
-  url: string; title: string; watched: boolean;
+/** Seconds of the video that actually played (seeking ahead doesn't count) over its length. */
+function playedFraction(v: HTMLVideoElement) {
+  if (!v.duration || !Number.isFinite(v.duration)) return 0;
+  let played = 0;
+  for (let i = 0; i < v.played.length; i++) played += v.played.end(i) - v.played.start(i);
+  return Math.min(1, played / v.duration);
+}
+
+/**
+ * The intro video. A video file (e.g. a Pinata link set in the CMS) plays in
+ * the app's own player, with nothing that links out of the app; a YouTube
+ * link still works through the YouTube player.
+ */
+export function IntroVideo({ url, title, poster, watched, onProgress, onWatched }: {
+  url: string; title: string; poster?: string | null; watched: boolean;
+  onProgress?: (fraction: number) => void; onWatched: () => void;
+}) {
+  const id = youtubeId(url);
+  if (!id && url) {
+    return <FileVideo url={url} title={title} poster={poster} watched={watched} onProgress={onProgress} onWatched={onWatched} />;
+  }
+  return <YouTubeVideo id={id} title={title} watched={watched} onProgress={onProgress} onWatched={onWatched} />;
+}
+
+function FileVideo({ url, title, poster, watched, onProgress, onWatched }: {
+  url: string; title: string; poster?: string | null; watched: boolean;
+  onProgress?: (fraction: number) => void; onWatched: () => void;
+}) {
+  return (
+    <VideoPlayer
+      src={url}
+      poster={poster}
+      label={title || 'Intro video'}
+      onTimeUpdate={(v) => {
+        const fraction = playedFraction(v);
+        onProgress?.(fraction);
+        if (fraction >= WATCH_THRESHOLD && !watched) onWatched();
+      }}
+    />
+  );
+}
+
+function YouTubeVideo({ id, title, watched, onProgress, onWatched }: {
+  id: string | null; title: string; watched: boolean;
   onProgress?: (fraction: number) => void; onWatched: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const cb = useRef({ onProgress, onWatched, watched });
   cb.current = { onProgress, onWatched, watched };
-  const id = youtubeId(url);
 
   useEffect(() => {
     if (!id || !host.current) return;

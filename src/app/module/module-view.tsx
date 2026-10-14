@@ -100,7 +100,7 @@ function OutOfAttempts({
       {confirming ? (
         <div className="space-y-3 rounded-xl border border-[#fde68a] bg-[#fffbeb] p-3.5">
           <p className="text-[12.5px] leading-5 text-[#92400e]">
-            If you skip, you won’t earn the week {m.week} badge. It still counts as done for your
+            If you skip, you won’t earn this module’s badge. It still counts as done for your
             certificate, and you can take the quiz again later.
           </p>
           <div className="flex flex-wrap items-center gap-3">
@@ -177,7 +177,7 @@ function QuizCard({
       <div className={card}>
         <span className="text-[11.5px] font-medium text-[#8e8ea6]">Quiz coming soon</span>
         <div>
-          <h4 className="text-[16.5px] font-medium text-[#171730]">Earn your week {m.week} badge</h4>
+          <h4 className="text-[16.5px] font-medium text-[#171730]">Earn this module’s badge</h4>
           <p className="mt-1.5 text-[12.5px] leading-5 text-[#5f5f7a]">
             This module’s quiz isn’t published yet. Check back after the session.
           </p>
@@ -222,7 +222,7 @@ function QuizCard({
       <div className={card}>
         <span className="text-[11.5px] font-medium text-[#8e8ea6]">Opens after session</span>
         <div>
-          <h4 className="text-[16.5px] font-medium text-[#171730]">Earn your week {m.week} badge</h4>
+          <h4 className="text-[16.5px] font-medium text-[#171730]">Earn this module’s badge</h4>
           <p className="mt-1.5 text-[12.5px] leading-5 text-[#5f5f7a]">
             The quiz opens after the live session{m.scheduledDate ? ` on ${dayTime(m.scheduledDate)}` : ''}.
           </p>
@@ -236,7 +236,7 @@ function QuizCard({
       <div className={card}>
         <span className="text-[11.5px] font-medium text-[#8e8ea6]">Skipped</span>
         <div>
-          <h4 className="text-[16.5px] font-medium text-[#171730]">No week {m.week} badge</h4>
+          <h4 className="text-[16.5px] font-medium text-[#171730]">No badge for this module</h4>
           <p className="mt-1.5 text-[12.5px] leading-5 text-[#5f5f7a]">
             You skipped this quiz, so it counts as done for your certificate but without the badge.
             Want the badge after all? You can take it again any time.
@@ -257,7 +257,7 @@ function QuizCard({
     <div className={card}>
       <span className="text-[11.5px] font-medium text-[#7c2ae8]">Ready when you are</span>
       <div>
-        <h4 className="text-[16.5px] font-medium text-[#171730]">Earn your week {m.week} badge</h4>
+        <h4 className="text-[16.5px] font-medium text-[#171730]">Earn this module’s badge</h4>
         <p className="mt-1.5 text-[12px] leading-relaxed text-[#5f5f7a]">
           Answer all {quiz.totalQuestions} correctly to earn the badge. {quiz.maxAttempts} attempts —
           if you don’t pass, rewatch and retry.

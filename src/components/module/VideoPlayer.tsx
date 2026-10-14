@@ -6,7 +6,11 @@ export interface PlayerHandle { seek: (seconds: number) => void }
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-export const VideoPlayer = forwardRef<PlayerHandle, { src: string; poster?: string | null; label: string }>(function VideoPlayer({ src, poster, label }, ref) {
+export const VideoPlayer = forwardRef<PlayerHandle, {
+  src: string; poster?: string | null; label: string;
+  /** called as the video plays, e.g. to track how much of it was watched */
+  onTimeUpdate?: (video: HTMLVideoElement) => void;
+}>(function VideoPlayer({ src, poster, label, onTimeUpdate }, ref) {
   const video = useRef<HTMLVideoElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -27,7 +31,11 @@ export const VideoPlayer = forwardRef<PlayerHandle, { src: string; poster?: stri
       <video
         aria-label={label}
         ref={video} src={src} poster={poster ?? undefined} preload="metadata" playsInline className="size-full object-cover cursor-pointer" onClick={toggle}
-        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onLoadedMetadata={(e) => setD(e.currentTarget.duration)}
+        // the video stays in the app: no browser menu to open it in a new tab or save it
+        onContextMenu={(e) => e.preventDefault()} disablePictureInPicture
+        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
+        onTimeUpdate={(e) => { setT(e.currentTarget.currentTime); onTimeUpdate?.(e.currentTarget); }}
+        onLoadedMetadata={(e) => setD(e.currentTarget.duration)}
       />
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/60 ${chrome}`} />
       {!playing && (

@@ -247,6 +247,7 @@ export default function OnboardView() {
               <IntroVideo
                 url={content.video.url ?? ''}
                 title={content.video.caption}
+                poster={content.video.posterUrl}
                 watched={progress.videoWatched}
                 onProgress={setWatchFraction}
                 onWatched={() => save({ videoWatched: true })}

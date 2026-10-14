@@ -14,8 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Si Her DeFi",
+  title: "Si Her DeFi Certification",
   description: "DeFi, taught by the people leading it.",
+  // Si Her DeFi crystal on the brand gradient (public/icon.svg, with PNG fallbacks)
+  icons: {
+    icon: [
+      { url: "/siherdefi/icon.svg", type: "image/svg+xml" },
+      { url: "/siherdefi/icon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/siherdefi/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

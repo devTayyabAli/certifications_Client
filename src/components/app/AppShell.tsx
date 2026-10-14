@@ -131,7 +131,8 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
           </button>
           <div className={`min-w-0 ${fade(collapsed)}`}>
             <p className="truncate text-[12px] font-medium text-[#171730] leading-tight">{profile?.name || 'My Account'}</p>
-            <p className="truncate text-[10.5px] text-[#8e8ea6] leading-tight mt-0.5">{profile?.role || 'Learner'}</p>
+            {/* the full title gets up to two lines (the block grows, pushing the wallet chip up) */}
+            <p className="line-clamp-2 whitespace-normal break-words text-[10.5px] text-[#8e8ea6] leading-snug mt-0.5" title={profile?.role || 'Learner'}>{profile?.role || 'Learner'}</p>
           </div>
         </div>
         <button type="button" tabIndex={collapsed ? -1 : 0} onClick={() => setOpen((o) => !o)} className={`shrink-0 p-1.5 rounded-lg transition cursor-pointer ${fade(collapsed)} ${open ? 'bg-gray-100 text-[#171730]' : 'text-[#8e8ea6] hover:text-[#171730] hover:bg-gray-100'}`} title="Account options" aria-label="Account options" aria-expanded={open}>
@@ -144,7 +145,7 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
             <Avatar src={profile?.photoUrl} name={profile?.name} className="size-8" />
             <div className="min-w-0">
               <p className="truncate text-[12px] font-medium text-[#171730]">{profile?.name || 'My Account'}</p>
-              <p className="truncate text-[10.5px] text-[#8e8ea6]">{profile?.role || 'Learner'}</p>
+              <p className="line-clamp-2 break-words text-[10.5px] leading-snug text-[#8e8ea6]" title={profile?.role || 'Learner'}>{profile?.role || 'Learner'}</p>
             </div>
           </div>
           <div className="py-1 space-y-0.5">
@@ -192,7 +193,7 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
               <Avatar src={profile?.photoUrl} name={profile?.name} className="size-9" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12.5px] font-medium text-[#171730]">{profile?.name || 'My Account'}</p>
-                <p className="truncate text-[11px] text-[#8e8ea6]">{profile?.role || 'Learner'}</p>
+                <p className="line-clamp-2 break-words text-[11px] leading-snug text-[#8e8ea6]" title={profile?.role || 'Learner'}>{profile?.role || 'Learner'}</p>
               </div>
             </div>
             <div className="space-y-1 pt-1 border-t border-[#f0f0f5]">
