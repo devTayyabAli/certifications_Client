@@ -951,15 +951,18 @@ function DashboardContent() {
   const featured = modules.find((m) => !isDone(m)) ?? null;
   const rest = modules.filter((m) => m !== featured);
   const unlocked = !!cert && cert.status !== "locked";
-  // finished sessions sit in their own list under the featured card; the
+  // every session finished (quiz passed or skipped). Not the same as the
+  // certificate being unlocked: that can happen after its own module, mid-cohort
+  const allDone = modules.length > 0 && modules.every(isDone);
+  // finished sessions sit in their own list after the upcoming ones; the
   // upcoming list keeps only what's still ahead (until everything is done,
   // when one "Your sessions" list shows them all)
-  const completed = unlocked ? [] : rest.filter(isDone);
+  const completed = allDone ? [] : rest.filter(isDone);
   // sessions + LinkedIn Lives in one list, by date
   type Item = { kind: "module"; at: number; m: ModuleItem } | { kind: "event"; at: number; e: CohortEvent };
   const items: Item[] = [
     ...rest
-      .filter((m) => unlocked || !isDone(m))
+      .filter((m) => allDone || !isDone(m))
       .map((m) => ({ kind: "module" as const, at: new Date(m.scheduledDate || 0).getTime(), m })),
     ...events.map((e) => ({ kind: "event" as const, at: new Date(e.date).getTime(), e })),
   ].sort((a, z) => a.at - z.at);
@@ -968,8 +971,8 @@ function DashboardContent() {
   const nextBadge = [...modules].sort((x, y) => x.week - y.week).find((m) => !earnedBadgeNames.has(m.badge?.name));
   const subtitle = !status.part1Done
     ? "Introduce yourself to unlock the weekly sessions."
-    : unlocked
-    ? "You did it. Every session and quiz is done, and your certificate is ready to mint on Base."
+    : allDone
+    ? "You did it. Every session and quiz is done, and your certificate is ready to claim."
     : earned === 0
     ? `You're in. Watch ${featured ? `“${featured.title}”` : "the first session"} and pass its quiz to earn your first badge.`
     : `You've earned ${earned} of ${TOTAL_BADGES} badges. Each session and quiz brings you closer to your certificate.`;
@@ -1103,26 +1106,13 @@ function DashboardContent() {
             {featured && (
               <FeaturedModule m={featured} part1Done={status.part1Done} onSchedule={setScheduling} />
             )}
-            {completed.length > 0 && (
-              <div className="space-y-3 pt-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-[11.5px] font-medium text-[#9a9cbd]">Completed ({completed.length})</h2>
-                  <span className="text-[11.5px] text-[#9a9cbd]">Rewatch any time</span>
-                </div>
-                <div className="space-y-3">
-                  {completed.map((m) => (
-                    <SessionCard key={m.slug} m={m} onSchedule={setScheduling} />
-                  ))}
-                </div>
-              </div>
-            )}
             <div className={`space-y-3 pt-3 ${items.length === 0 ? "hidden" : ""}`}>
               <div className="flex items-center justify-between">
                 <h2 className="text-[11.5px] font-medium text-[#9a9cbd]">
-                  {unlocked ? `Your sessions (${items.length})` : `Upcoming sessions (${items.length})`}
+                  {allDone ? `Your sessions (${items.length})` : `Upcoming sessions (${items.length})`}
                 </h2>
                 <span className="text-[11.5px] text-[#9a9cbd]">
-                  {unlocked ? "All done. Rewatch any time." : "Add them to your calendar now"}
+                  {allDone ? "All done. Rewatch any time." : "Add them to your calendar now"}
                 </span>
               </div>
               <div className="relative space-y-3">
@@ -1186,6 +1176,20 @@ function DashboardContent() {
                 </div>
               )}
             </div>
+            {/* finished sessions: after the upcoming ones, before onboarding */}
+            {completed.length > 0 && (
+              <div className="space-y-3 pt-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[11.5px] font-medium text-[#9a9cbd]">Completed ({completed.length})</h2>
+                  <span className="text-[11.5px] text-[#9a9cbd]">Rewatch any time</span>
+                </div>
+                <div className="space-y-3">
+                  {completed.map((m) => (
+                    <SessionCard key={m.slug} m={m} onSchedule={setScheduling} />
+                  ))}
+                </div>
+              </div>
+            )}
             {status.part1Done && (
               <div className="space-y-3 pt-3">
                 <h2 className="text-[11.5px] font-medium text-[#9a9cbd]">Your onboarding</h2>
