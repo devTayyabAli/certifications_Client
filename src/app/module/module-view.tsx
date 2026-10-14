@@ -296,6 +296,41 @@ function QuizCard({
   );
 }
 
+/**
+ * A speaker's bio: four lines, then "Read more" when there's more. The padding
+ * sits on the box and the clamp on the text inside it, so a cut-off fifth line
+ * never peeks out under the fourth.
+ */
+function SpeakerBio({ bio }: { bio: string }) {
+  const text = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+  useEffect(() => {
+    const el = text.current;
+    if (el && !open) setLong(el.scrollHeight > el.clientHeight + 1);
+  }, [bio, open]);
+  return (
+    <div className="rounded-xl border border-[#f0f0f5] bg-[#fafafc] p-2.5">
+      <p
+        ref={text}
+        className={`whitespace-pre-line break-words text-[11px] leading-relaxed text-[#71718a] ${open ? "" : "line-clamp-4"}`}
+      >
+        {bio}
+      </p>
+      {(long || open) && (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="link-cta mt-1 text-[11px] font-medium text-[#7c2ae8]"
+        >
+          {open ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function SpeakerCard({ s }: { s: SpeakerItem }) {
   const telegram = s.telegramHandle?.replace(/^@/, '');
   return (
@@ -329,11 +364,7 @@ function SpeakerCard({ s }: { s: SpeakerItem }) {
           <p className="text-[11.5px] text-[#5f5f7a] mt-0.5 leading-snug line-clamp-2">{s.role}</p>
         </div>
       </div>
-      {s.bio && (
-        <p className="text-[11px] text-[#71718a] leading-relaxed line-clamp-4 bg-[#fafafc] p-2.5 rounded-xl border border-[#f0f0f5]">
-          {s.bio}
-        </p>
-      )}
+      {s.bio && <SpeakerBio bio={s.bio} />}
       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
         {s.links?.website && (
           <a

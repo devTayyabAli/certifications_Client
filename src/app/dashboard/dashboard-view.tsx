@@ -485,6 +485,8 @@ function FeaturedModule({
                       <span className="inline-flex items-center gap-1">
                         Added to calendar <Check className="size-3.5" />
                       </span>
+                    ) : m.calendarOutdated ? (
+                      "Time changed · Update calendar"
                     ) : (
                       "Add to calendar"
                     )}
@@ -585,6 +587,17 @@ function SessionCard({
           >
             <Check className="size-4" />
             <span>Added to calendar</span>
+          </button>
+        ) : m.calendarOutdated ? (
+          // added before the session moved: the learner's calendar has the old time
+          <button
+            type="button"
+            onClick={() => onSchedule(m)}
+            title="This session has moved since you added it"
+            className="inline-flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#fde68a] bg-[#fffbeb] px-4 text-[14px] font-medium text-[#92400e] transition hover:bg-[#fef3c7] max-sm:w-full"
+          >
+            <CalendarIcon className="size-4 text-[#b45309]" />
+            <span>Time changed · Update</span>
           </button>
         ) : (
           <Button size="md" showIcon={false} onClick={() => onSchedule(m)} className="shrink-0 max-sm:w-full">

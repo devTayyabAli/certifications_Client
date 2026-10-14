@@ -435,8 +435,12 @@ export interface ModuleItem {
   isCompleted: boolean;
   badge: { name: string; image: string };
   quiz: ModuleQuizSummary;
+  /** added to the learner's calendar, at the session's current date and time */
   isScheduled: boolean;
   scheduledProvider: "google" | "apple" | "outlook" | "proton" | "other" | null;
+  /** added to a calendar, but the session has moved since: the learner should add it again */
+  calendarOutdated?: boolean;
+  addedToCalendarAt?: string | null;
   speakers: SpeakerItem[];
 }
 
@@ -475,9 +479,16 @@ export const modulesApi = {
     slugOrId: string,
     calendarType: "google" | "apple" | "outlook" | "proton" | "other" = "google",
   ) {
+    // the learner's own time zone, so reminders can be sent in their time
+    let timezone: string | undefined;
+    try {
+      timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      timezone = undefined;
+    }
     return request<any>(`/modules/${slugOrId}/schedule`, {
       method: "POST",
-      body: JSON.stringify({ calendarType }),
+      body: JSON.stringify({ calendarType, timezone }),
     });
   },
 
