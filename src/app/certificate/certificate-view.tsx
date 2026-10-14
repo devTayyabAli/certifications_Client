@@ -381,7 +381,7 @@ export default function CertificateView() {
                     )}
                   </div>
                   <Button disabled showIcon={false}>
-                    Claim on {cert.onChain?.network || 'Base'} · coming soon
+                    Coming soon
                   </Button>
                 </>
               )}

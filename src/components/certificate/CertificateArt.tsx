@@ -43,7 +43,7 @@ export const CertificateArt = forwardRef<HTMLDivElement, { cert: Certificate | a
     { x: 527, width: 250, label: 'CONTRACT', text: cert.onChain?.contractAddress ? shortAddress(cert.onChain.contractAddress) : 'At mint' },
     { x: 795, width: 180, label: 'TOKEN ID', text: minted && cert.onChain?.tokenId ? `#${String(cert.onChain.tokenId).padStart(4, '0')}` : '—' },
     { x: 989, width: 165, label: 'NETWORK', text: network, dot: true },
-    { x: 1168, width: 320, label: 'VERIFY', text: cert.verificationCode || 'After it unlocks' },
+    { x: 1168, width: 290, label: 'VERIFY', text: cert.verificationCode || 'After it unlocks' },
   ];
 
   return (
