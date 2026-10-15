@@ -15,18 +15,18 @@ import { eventsApi, isAuthenticated, modulesApi, type ModuleItem } from "@/lib/a
 import { sessionWhen, tz } from "@/lib/format";
 import type { CohortEvent } from "@/lib/types";
 
-/** The cohort runs on US Eastern time; days are grouped the way the dashboard shows them. */
-const COHORT_TZ = "America/New_York";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type Entry =
   | { kind: "session"; key: string; at: number; m: ModuleItem }
   | { kind: "event"; key: string; at: number; e: CohortEvent };
 
-/** "2026-11-05" for a moment, as a calendar date in the cohort's time zone. */
+/**
+ * "2026-11-05" for a moment, as a calendar date in the viewer's own time zone:
+ * a session late in the US evening sits on the next day for learners further east.
+ */
 function dayKey(iso: string | Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: COHORT_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -38,10 +38,6 @@ function dayKey(iso: string | Date) {
 const keyOf = (y: number, m: number, d: number) =>
   `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-/** "10:00 PM" in the learner's own zone, to sit next to the ET time. */
-function localTime(iso: string) {
-  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
-}
 
 const isDone = (m: ModuleItem) => !!m.quiz?.isPassed || !!m.quiz?.isSkipped;
 
@@ -148,7 +144,8 @@ export default function CalendarView() {
         <header className="space-y-1.5">
           <h1 className="text-[26px] font-medium leading-[1.15] tracking-[-0.02em] text-[#151534] sm:text-[30px]">Calendar</h1>
           <p className="text-[14px] leading-6 text-[#4c4d77]">
-            Every live session and LinkedIn Live in the cohort. Times are US Eastern, with your time ({tz()}) alongside.
+            Every live session and LinkedIn Live in the cohort, shown in your time zone ({tz()}), with US Eastern
+            time alongside.
           </p>
         </header>
 
@@ -302,7 +299,7 @@ function SessionRow({ m, onSchedule }: { m: ModuleItem; onSchedule: (m: ModuleIt
         <h3 className="mt-0.5 text-[15px] font-medium text-[#151534]">{m.title}</h3>
         <p className="mt-1 text-[12.5px] text-[#5f5f7a]">
           <time dateTime={m.scheduledDate!}>{when.time}</time>
-          <span className="text-[#9a9cbd]"> · {localTime(m.scheduledDate!)} your time</span>
+          {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
         </p>
         {m.presenter && (
           <p className="mt-0.5 text-[12.5px] text-[#7e7e96]">
@@ -357,7 +354,7 @@ function EventRow({ e }: { e: CohortEvent }) {
           ) : (
             <>
               <time dateTime={e.date}>{when.time}</time>
-              <span className="text-[#9a9cbd]"> · {localTime(e.date)} your time</span>
+              {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
             </>
           )}
         </p>

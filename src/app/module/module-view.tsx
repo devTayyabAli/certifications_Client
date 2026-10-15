@@ -501,7 +501,10 @@ export default function ModuleView({ slug }: { slug: string }) {
           >
             <Arrow dir="left" /> Back to dashboard
           </Link>
-          <span className="text-[11px] font-medium text-[#8e8ea6]">{m.dateLabel}</span>
+          {/* the session's own time in the viewer's zone; the CMS label (written in ET) only when there's no date */}
+          <span className="text-[11px] font-medium text-[#8e8ea6]">
+            {m.scheduledDate ? dayTime(m.scheduledDate) : m.dateLabel}
+          </span>
         </div>
 
         <div>

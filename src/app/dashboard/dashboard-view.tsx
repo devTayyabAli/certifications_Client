@@ -29,7 +29,8 @@ import {
   type PartnerItem,
 } from "@/lib/api";
 import type { CohortEvent } from "@/lib/types";
-import { firstName, sessionWhen, shortAddress, tagCase, titleCase } from "@/lib/format";
+import { firstName, sessionWhen, shortAddress, tagCase, timeUntil, titleCase } from "@/lib/format";
+import { useNow } from "@/lib/use-now";
 
 const TOTAL_BADGES = 12;
 const SESSIONS_STEP = 3;
@@ -350,6 +351,33 @@ const LinkedInMark = ({ className = "size-4" }: { className?: string }) => (
   </svg>
 );
 
+/** "Starts in 5 hours" for anything within two days: a countdown can't be misread across time zones. */
+function StartsSoon({ iso }: { iso: string | null | undefined }) {
+  const now = useNow();
+  if (!iso || !now) return null;
+  const ms = new Date(iso).getTime() - now;
+  if (ms <= 0 || ms > 48 * 3600e3) return null;
+  return (
+    <span className="ml-2 inline-flex items-center rounded-full bg-[#fff7ed] px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
+      Starts {timeUntil(iso)}
+    </span>
+  );
+}
+
+/** The featured session's live time on the dark banner: the viewer's own time first. */
+function FeaturedWhen({ m }: { m: ModuleItem }) {
+  const when = sessionWhen(m.scheduledDate!, m.endDate || undefined);
+  return (
+    <p className="mt-1 text-[12.5px] font-medium text-white/90">
+      <time dateTime={m.scheduledDate!}>
+        Live {when.weekday}, {when.month} {when.day} · {when.time}
+      </time>
+      {!when.sameAsEt && <span className="font-normal text-white/65"> · {when.et}</span>}
+      <StartsSoon iso={m.scheduledDate} />
+    </p>
+  );
+}
+
 function EventCard({ e }: { e: CohortEvent }) {
   const when = sessionWhen(e.date, e.endDate);
   return (
@@ -381,6 +409,8 @@ function EventCard({ e }: { e: CohortEvent }) {
               {when.weekday}, {when.month} {when.day}
               {e.timeTba ? " · Time to be announced" : ` · ${when.time}`}
             </time>
+            {!e.timeTba && !when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
+            <StartsSoon iso={e.timeTba ? null : e.date} />
           </p>
           {(e.subtitle || e.partnerName) && (
             <p className="mt-1 line-clamp-2 text-[12.5px] leading-5 text-[#7e7e96]">
@@ -447,6 +477,7 @@ function FeaturedModule({
           {m.videoUrl ? "Session recording" : "Recording after the live session"}
         </span>
         <h3 className="mt-2 text-[20px] font-medium tracking-tight text-white">{m.title}</h3>
+        {upcoming && m.scheduledDate && <FeaturedWhen m={m} />}
         <p className="mt-1.5 max-w-xl text-[12px] leading-relaxed text-white/80 line-clamp-2">
           {m.description}
         </p>
@@ -568,6 +599,8 @@ function SessionCard({
               <time dateTime={m.scheduledDate ?? undefined}>
                 {when.weekday}, {when.month} {when.day} · {when.time}
               </time>
+              {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
+              <StartsSoon iso={m.sessionState === "upcoming" ? m.scheduledDate : null} />
             </p>
           )}
           <p
