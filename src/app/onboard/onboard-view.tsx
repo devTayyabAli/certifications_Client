@@ -119,7 +119,7 @@ export default function OnboardView() {
               </button>
             </div>
           ) : (
-            <div className="space-y-6 animate-pulse" aria-busy="true">
+            <div className="space-y-6 animate-pulse motion-reduce:animate-none" role="status" aria-busy="true" aria-label="Loading onboarding">
               <div className="h-5 w-40 rounded bg-[#ececf2]" />
               <div className="h-8 w-2/3 rounded bg-[#ececf2]" />
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">

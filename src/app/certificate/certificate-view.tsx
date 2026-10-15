@@ -98,7 +98,7 @@ export default function CertificateView() {
   if (loading || !cert) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-[1060px] space-y-6 animate-pulse">
+        <div className="mx-auto max-w-[1060px] space-y-6 animate-pulse motion-reduce:animate-none" role="status" aria-busy="true" aria-label="Loading your certificate">
           <div className="h-8 w-56 rounded bg-[#ececf2]" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
             <div className="h-[560px] rounded-3xl bg-[#ececf2] lg:col-span-8" />

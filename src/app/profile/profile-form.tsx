@@ -6,6 +6,7 @@ import { useProfile, type UserProfile } from "@/components/profile-provider";
 import { profileApi, isAuthenticated } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { LabelInput } from "@/components/ui/LabelInput";
+import { Skeleton, SkeletonPage } from "@/components/ui/Skeleton";
 import { toDataUrl } from "@/lib/image";
 
 type Field = "name" | "role" | "organization" | "socialLink" | "bio";
@@ -74,6 +75,8 @@ export default function ProfileForm() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  /** The server's copy has arrived (or failed): the form can show */
+  const [remoteLoaded, setRemoteLoaded] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -101,7 +104,10 @@ export default function ProfileForm() {
           saveProfile({ ...v, photoUrl: remote.photoUrl ?? "" });
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setRemoteLoaded(true);
+      });
 
     return () => {
       isMounted = false;
@@ -159,6 +165,31 @@ export default function ProfileForm() {
   };
 
   const isPrefilledFromApplication = prefilledFields.length > 0;
+
+  // Nothing saved on this device yet: wait for the server's copy (and the
+  // application prefill) rather than show empty fields that then fill in
+  // under the learner's typing
+  if (!remoteLoaded && !profile.name) {
+    return (
+      <SkeletonPage label="Loading your profile" className="w-full">
+        <h1 className="text-[22px] sm:text-[24px] font-medium tracking-tight text-[#171730]">Set up your profile</h1>
+        <p className="mt-1 text-[12.5px] sm:text-[13px] leading-relaxed text-[#5f5f7a]">
+          This is how you’ll appear to partners and the rest of the cohort. You can change it any time.
+        </p>
+        <div className="mt-5 flex items-center gap-3.5">
+          <Skeleton className="size-14 shrink-0 rounded-full" />
+          <Skeleton className="h-9 w-32 rounded-xl" />
+        </div>
+        <div className="mt-5 space-y-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[50px] rounded-xl" />
+          ))}
+          <Skeleton className="h-[104px] rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
+        </div>
+      </SkeletonPage>
+    );
+  }
 
   return (
     <div className="w-full">

@@ -31,6 +31,7 @@ import {
 import type { CohortEvent } from "@/lib/types";
 import { firstName, sessionWhen, shortAddress, tagCase, timeUntil, titleCase } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
+import { Skeleton, SkeletonPage } from "@/components/ui/Skeleton";
 
 const TOTAL_BADGES = 12;
 const SESSIONS_STEP = 3;
@@ -361,6 +362,57 @@ function StartsSoon({ iso }: { iso: string | null | undefined }) {
     <span className="ml-2 inline-flex items-center rounded-full bg-[#fff7ed] px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
       Starts {timeUntil(iso)}
     </span>
+  );
+}
+
+/** The dashboard's shape while it loads: header, profile + badges, featured session, session list. */
+function DashboardSkeleton() {
+  return (
+    <SkeletonPage label="Loading your dashboard" className="mx-auto max-w-5xl space-y-8">
+      <div className="space-y-3">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-full max-w-[480px]" />
+      </div>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="space-y-4 rounded-2xl border border-[#ececf2] bg-white p-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="size-16 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <Skeleton className="h-3 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+        <div className="space-y-4 rounded-2xl border border-[#ececf2] bg-white p-6">
+          <Skeleton className="h-4 w-32" />
+          <div className="flex gap-1.5">
+            {Array.from({ length: 12 }, (_, i) => (
+              <Skeleton key={i} className="h-2 flex-1 rounded-full" />
+            ))}
+          </div>
+          <Skeleton className="h-3 w-2/3" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-5 w-44" />
+        <Skeleton className="h-[240px] rounded-2xl" />
+        <Skeleton className="h-3 w-36" />
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-4 rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5">
+            <Skeleton className="h-[68px] w-[60px] shrink-0 rounded-xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-64 max-w-full" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+            <Skeleton className="hidden h-10 w-40 shrink-0 rounded-xl sm:block" />
+          </div>
+        ))}
+      </div>
+    </SkeletonPage>
   );
 }
 
@@ -972,9 +1024,7 @@ function DashboardContent() {
   if (loading || !status) {
     return (
       <AppShell>
-        <div className="grid min-h-[60vh] place-items-center text-[#7c2ae8]">
-          <div className="size-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        </div>
+        <DashboardSkeleton />
       </AppShell>
     );
   }

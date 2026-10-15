@@ -468,7 +468,7 @@ export default function ModuleView({ slug }: { slug: string }) {
   if (!m) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-[1040px] space-y-6 animate-pulse">
+        <div className="mx-auto max-w-[1040px] space-y-6 animate-pulse motion-reduce:animate-none" role="status" aria-busy="true" aria-label="Loading the session">
           <div className="h-4 w-32 rounded bg-[#ececf2]" />
           <div className="h-8 w-2/3 rounded bg-[#ececf2]" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">

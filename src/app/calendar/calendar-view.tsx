@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
 import { SubscribeCard } from "@/components/calendar/SubscribeCard";
+import { Skeleton, SkeletonPage } from "@/components/ui/Skeleton";
 import { ScheduleModal } from "@/components/dashboard/ScheduleModal";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Check } from "@/components/ui/Check";
@@ -97,9 +98,39 @@ export default function CalendarView() {
   if (loading) {
     return (
       <AppShell>
-        <div className="grid min-h-[60vh] place-items-center text-[#7c2ae8]">
-          <div className="size-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        </div>
+        <SkeletonPage label="Loading the calendar" className="mx-auto max-w-5xl space-y-6">
+          <div className="space-y-2.5">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-full max-w-[560px]" />
+          </div>
+          <Skeleton className="h-[104px] rounded-2xl" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {/* month grid */}
+            <div className="space-y-4 rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5 lg:col-span-7">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-36" />
+                <Skeleton className="h-7 w-28" />
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {Array.from({ length: 35 }, (_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                ))}
+              </div>
+            </div>
+            {/* the chosen day's sessions */}
+            <div className="space-y-3 lg:col-span-5">
+              <Skeleton className="h-5 w-48" />
+              {[0, 1].map((i) => (
+                <div key={i} className="space-y-3 rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-52" />
+                  <Skeleton className="h-3 w-64 max-w-full" />
+                  <Skeleton className="h-10 w-40 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </SkeletonPage>
       </AppShell>
     );
   }
