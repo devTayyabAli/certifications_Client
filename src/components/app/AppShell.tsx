@@ -10,6 +10,10 @@ import { useProfile } from '@/components/profile-provider';
 import { useWallet } from '@/components/wallet-provider';
 import { useSignOut } from '@/lib/use-sign-out';
 import { useCertificateUnlocked } from '@/lib/cohort-progress';
+import { createFlagStore, usePersistentValue } from '@/lib/persistent-store';
+
+/** The desktop sidebar stays collapsed or expanded across pages and visits. */
+const sidebarCollapsedStore = createFlagStore('siherdefi_sidebar_collapsed');
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
@@ -135,15 +139,15 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div className="relative" ref={ref}>
-      <div className="flex items-center justify-between gap-2 overflow-hidden whitespace-nowrap">
-        <div className="flex min-w-0 items-center gap-2.5 pl-1">
+      <div className={`flex justify-between gap-2 overflow-hidden whitespace-nowrap ${collapsed ? 'items-center' : 'items-start'}`}>
+        <div className="flex min-w-0 items-start gap-2.5 pl-1">
           <button type="button" onClick={() => setOpen((o) => !o)} className="shrink-0 cursor-pointer rounded-full" title={profile?.name ?? 'Account'} aria-label="Open account menu">
             <Avatar src={profile?.photoUrl} name={profile?.name} className="size-8" />
           </button>
-          <div className={`min-w-0 ${fade(collapsed)}`}>
+          <div className={`min-w-0 ${collapsed ? 'max-h-8' : ''} ${fade(collapsed)}`}>
             <p className="truncate text-[12px] font-medium text-[#171730] leading-tight">{profile?.name || 'My Account'}</p>
-            {/* the full title gets up to two lines (the block grows, pushing the wallet chip up) */}
-            <p className="line-clamp-2 whitespace-normal break-words text-[10.5px] text-[#8e8ea6] leading-snug mt-0.5" title={profile?.role || 'Learner'}>{profile?.role || 'Learner'}</p>
+            {/* the full title, on as many lines as it needs: the block grows, pushing the wallet chip up */}
+            <p className="whitespace-normal break-words text-[10.5px] text-[#8e8ea6] leading-snug mt-0.5">{profile?.role || 'Learner'}</p>
           </div>
         </div>
         <button type="button" tabIndex={collapsed ? -1 : 0} onClick={() => setOpen((o) => !o)} className={`shrink-0 p-1.5 rounded-lg transition cursor-pointer ${fade(collapsed)} ${open ? 'bg-gray-100 text-[#171730]' : 'text-[#8e8ea6] hover:text-[#171730] hover:bg-gray-100'}`} title="Account options" aria-label="Account options" aria-expanded={open}>
@@ -151,12 +155,12 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
         </button>
       </div>
       {open && (
-        <div className={`absolute bottom-12 left-0 rounded-2xl border border-[#e4e4ed] bg-white p-2 shadow-2xl z-50 ${collapsed ? 'w-[220px]' : 'right-0 w-full'}`}>
+        <div className={`absolute bottom-full mb-2 left-0 rounded-2xl border border-[#e4e4ed] bg-white p-2 shadow-2xl z-50 ${collapsed ? 'w-[220px]' : 'right-0 w-full'}`}>
           <div className="flex items-center gap-2.5 p-2 border-b border-[#f0f0f5]">
             <Avatar src={profile?.photoUrl} name={profile?.name} className="size-8" />
             <div className="min-w-0">
               <p className="truncate text-[12px] font-medium text-[#171730]">{profile?.name || 'My Account'}</p>
-              <p className="line-clamp-2 break-words text-[10.5px] leading-snug text-[#8e8ea6]" title={profile?.role || 'Learner'}>{profile?.role || 'Learner'}</p>
+              <p className="break-words text-[10.5px] leading-snug text-[#8e8ea6]">{profile?.role || 'Learner'}</p>
             </div>
           </div>
           <div className="py-1 space-y-0.5">
@@ -229,7 +233,14 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { wallet } = useWallet();
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = usePersistentValue(sidebarCollapsedStore);
+  // No animations until the first paint: a page loaded with the sidebar
+  // collapsed renders expanded on the server, and shouldn't visibly shrink
+  const [animate, setAnimate] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setAnimate(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [drawer, setDrawer] = useState(false);
   const pathname = usePathname();
   useEffect(() => { setDrawer(false); }, [pathname]);
@@ -254,11 +265,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
       {drawer && <MobileDrawer onClose={() => setDrawer(false)} />}
 
-      <aside className={`sticky top-3 my-3 ml-3 h-[calc(100vh-1.5rem)] hidden md:flex flex-col justify-between rounded-2xl border border-[#ececf2] bg-white shadow-[0_1px_3px_rgba(23,23,48,0.04),0_10px_28px_-18px_rgba(23,23,48,0.12)] transition-[width] ${EASE} z-30 shrink-0 ${collapsed ? 'w-[72px]' : 'w-[240px]'}`}>
+      <aside className={`sticky top-3 my-3 ml-3 h-[calc(100vh-1.5rem)] hidden md:flex flex-col justify-between rounded-2xl border border-[#ececf2] bg-white shadow-[0_1px_3px_rgba(23,23,48,0.04),0_10px_28px_-18px_rgba(23,23,48,0.12)] transition-[width] ${EASE} z-30 shrink-0 ${collapsed ? 'w-[72px]' : 'w-[240px]'} ${animate ? '' : 'transition-none! [&_*]:transition-none!'}`}>
         <div className="px-4 py-6">
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
             <Link href="/dashboard" tabIndex={collapsed ? -1 : 0} className={`block overflow-hidden transition-[width,opacity] ${EASE} ${collapsed ? 'w-0 opacity-0' : 'w-[98px] opacity-100'}`}><Logo /></Link>
-            <button type="button" onClick={() => setCollapsed((c) => !c)} className="rounded-lg p-1.5 text-[#8e8ea6] hover:bg-gray-100 hover:text-[#171730] transition-colors cursor-pointer" title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            <button type="button" onClick={() => sidebarCollapsedStore.set(!collapsed)} className="rounded-lg p-1.5 text-[#8e8ea6] hover:bg-gray-100 hover:text-[#171730] transition-colors cursor-pointer" title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
               {Icon.collapse}
             </button>
           </div>

@@ -16,3 +16,11 @@ export function assetPath(path: string): string {
   }
   return `${BASE_PATH}${clean}`;
 }
+
+/** The card image shown when a link to the app is shared (Slack, WhatsApp, LinkedIn…). */
+export const SHARE_IMAGE = {
+  url: `${BASE_PATH}/og-image.png`,
+  width: 1200,
+  height: 630,
+  alt: "Si Her DeFi",
+};

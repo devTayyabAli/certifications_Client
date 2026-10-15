@@ -1196,12 +1196,16 @@ function DashboardContent() {
                 <StartHere status={status} />
               </div>
             )}
-            <CertificateRow
-              unlocked={unlocked}
-              passed={modules.filter(isDone).length}
-              total={modules.length}
-            />
-            {unlocked && cert?.status !== "minted" && <ReadyToMint modules={modules.length} badges={earned} />}
+            {/* one certificate card at a time: the big "ready" banner replaces the row while it shows */}
+            {unlocked && cert?.status !== "minted" ? (
+              <ReadyToMint modules={modules.length} badges={earned} />
+            ) : (
+              <CertificateRow
+                unlocked={unlocked}
+                passed={modules.filter(isDone).length}
+                total={modules.length}
+              />
+            )}
           </div>
         </section>
 

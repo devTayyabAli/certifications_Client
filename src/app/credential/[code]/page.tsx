@@ -8,7 +8,7 @@ import { Arrow } from "@/components/ui/Arrow";
 import { Check } from "@/components/ui/Check";
 import { API_BASE_URL, type CertificateData, type PublicCertificate } from "@/lib/api";
 import { formatIssueDate } from "@/lib/certificate";
-import { assetPath } from "@/lib/constants";
+import { assetPath, SHARE_IMAGE } from "@/lib/constants";
 
 /**
  * Public certificate verification — anyone with the link (e.g. from LinkedIn)
@@ -43,8 +43,9 @@ export async function generateMetadata({ params }: PageProps<"/credential/[code]
     description,
     // Personal record: shareable by link, but kept out of search engines
     robots: { index: false, follow: false },
-    openGraph: { title, description, type: "website" },
-    twitter: { card: "summary", title, description },
+    // Replaces the site-wide card, so the brand image and site name are repeated here
+    openGraph: { title, description, type: "website", siteName: "Si Her DeFi", images: [SHARE_IMAGE] },
+    twitter: { card: "summary_large_image", title, description, images: [SHARE_IMAGE.url] },
   };
 }
 
