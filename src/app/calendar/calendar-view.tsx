@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
 import { SubscribeCard } from "@/components/calendar/SubscribeCard";
 import { Skeleton, SkeletonPage } from "@/components/ui/Skeleton";
+import { useNow } from "@/lib/use-now";
 import { ScheduleModal } from "@/components/dashboard/ScheduleModal";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Check } from "@/components/ui/Check";
@@ -51,6 +52,7 @@ export default function CalendarView() {
   const [viewState, setView] = useState<{ y: number; m: number } | null>(null);
   const [selectedState, setSelected] = useState<string | null>(null);
   const [scheduling, setScheduling] = useState<ModuleItem | null>(null);
+  const [schedulingEvent, setSchedulingEvent] = useState<CohortEvent | null>(null);
 
   // bumped after "Add to calendar" so the sessions reload with their new state
   const [reloads, setReloads] = useState(0);
@@ -302,7 +304,7 @@ export default function CalendarView() {
                 x.kind === "session" ? (
                   <SessionRow key={x.m.slug} m={x.m} onSchedule={setScheduling} />
                 ) : (
-                  <EventRow key={x.e.id} e={x.e} />
+                  <EventRow key={x.e.id} e={x.e} onSchedule={setSchedulingEvent} />
                 )
               )
             )}
@@ -312,6 +314,7 @@ export default function CalendarView() {
         {scheduling && (
           <ScheduleModal module={scheduling} onClose={() => setScheduling(null)} onScheduled={reload} />
         )}
+        {schedulingEvent && <ScheduleModal event={schedulingEvent} onClose={() => setSchedulingEvent(null)} />}
       </div>
     </AppShell>
   );
@@ -372,8 +375,11 @@ function SessionRow({ m, onSchedule }: { m: ModuleItem; onSchedule: (m: ModuleIt
   );
 }
 
-function EventRow({ e }: { e: CohortEvent }) {
+function EventRow({ e, onSchedule }: { e: CohortEvent; onSchedule: (e: CohortEvent) => void }) {
   const when = sessionWhen(e.date, e.endDate);
+  const now = useNow();
+  // a confirmed time that's still ahead can go into the learner's own calendar
+  const canAdd = !e.timeTba && now > 0 && new Date(e.date).getTime() > now;
   return (
     <article className="space-y-3 rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5">
       <div>
@@ -397,15 +403,22 @@ function EventRow({ e }: { e: CohortEvent }) {
           </p>
         )}
       </div>
-      {e.ctaActive === false ? (
-        <ButtonLink href={e.link} size="md" disabled showIcon={false} title="Registration opens soon">
-          {e.ctaText || "Save the Date"}
-        </ButtonLink>
-      ) : (
-        <ButtonLink href={e.link} external size="md">
-          {e.ctaText || (e.kind === "linkedin-live" ? "Join on LinkedIn" : "Open event")}
-        </ButtonLink>
-      )}
+      <div className="flex flex-wrap items-center gap-2.5">
+        {canAdd && (
+          <Button size="md" showIcon={false} onClick={() => onSchedule(e)}>
+            Add to calendar
+          </Button>
+        )}
+        {e.ctaActive === false ? (
+          <ButtonLink href={e.link} size="md" variant={canAdd ? "white" : "primary"} disabled showIcon={false} title="Registration opens soon">
+            {e.ctaText || "Save the Date"}
+          </ButtonLink>
+        ) : (
+          <ButtonLink href={e.link} external size="md" variant={canAdd ? "white" : "primary"}>
+            {e.ctaText || (e.kind === "linkedin-live" ? "Join on LinkedIn" : "Open event")}
+          </ButtonLink>
+        )}
+      </div>
     </article>
   );
 }

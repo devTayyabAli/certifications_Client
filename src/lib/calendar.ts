@@ -430,3 +430,30 @@ export function moduleToSessionData(m: {
     presenter: speakerNames,
   };
 }
+
+/**
+ * Convert a cohort event (e.g. a LinkedIn Live) to SessionData. Its own page
+ * link goes in as the join link once it has one (not the placeholder company page).
+ */
+export function eventToSessionData(e: {
+  id: string;
+  kind: string;
+  title: string;
+  subtitle?: string;
+  date: string;
+  endDate?: string;
+  partnerName?: string;
+  link: string;
+  linkIsPlaceholder?: boolean;
+}): SessionData {
+  const live = e.kind === "linkedin-live";
+  return {
+    id: e.id.startsWith("event-") ? e.id : `event-${e.id}`,
+    title: live ? `${e.title} (LinkedIn Live)` : e.title,
+    startDate: e.date,
+    endDate: e.endDate,
+    location: live ? "LinkedIn Live" : "Online",
+    description: [e.subtitle, e.partnerName ? `With ${e.partnerName}` : ""].filter(Boolean).join("\n\n") || undefined,
+    meetingUrl: e.linkIsPlaceholder ? undefined : e.link,
+  };
+}
