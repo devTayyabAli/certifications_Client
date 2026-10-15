@@ -1,11 +1,16 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { AppShell } from '@/components/app/AppShell';
 import { CertificateArt } from '@/components/certificate/CertificateArt';
-import { MintDialog, explorerName } from '@/components/certificate/MintDialog';
+import { Web3Boundary } from '@/components/web3-boundary';
+import { explorerName } from '@/lib/certificate';
+
+// The claim dialog uses the wallet libraries: they load when it opens, not with the page
+const MintDialog = dynamic(() => import('@/components/certificate/MintDialog').then((m) => m.MintDialog), { ssr: false });
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Arrow } from '@/components/ui/Arrow';
 import { Check } from '@/components/ui/Check';
@@ -410,18 +415,26 @@ export default function CertificateView() {
         </div>
       </div>
       {minting && (
-        <MintDialog
-          cert={cert}
-          startNow={minting === 'watch'}
-          onClose={() => {
-            setMinting(null);
-            load();
-          }}
-          onMinted={(c) => {
-            setCert(c);
-            certificateMintedStore.set(true);
-          }}
-        />
+        <Web3Boundary
+          fallback={
+            <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 backdrop-blur-xs" aria-busy="true" aria-label="Opening your wallet">
+              <div className="size-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            </div>
+          }
+        >
+          <MintDialog
+            cert={cert}
+            startNow={minting === 'watch'}
+            onClose={() => {
+              setMinting(null);
+              load();
+            }}
+            onMinted={(c) => {
+              setCert(c);
+              certificateMintedStore.set(true);
+            }}
+          />
+        </Web3Boundary>
       )}
     </AppShell>
   );

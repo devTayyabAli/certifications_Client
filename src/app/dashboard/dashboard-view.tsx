@@ -1217,14 +1217,21 @@ function DashboardContent() {
                 <span className="text-[12.5px] text-[#8e8ea6]">{partnersCopy.subheading}</span>
               )}
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {(allPartners ? partners : partners.slice(0, PARTNERS_STEP)).map((p) => (
                 <PartnerCard key={p.id} p={p} />
               ))}
+              {/* the same fade as the sessions list, with the button sitting on it */}
+              {!allPartners && partners.length > PARTNERS_STEP && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-[#f8f8fc]/0 via-[#f8f8fc]/80 to-[#f8f8fc] sm:h-24"
+                />
+              )}
             </div>
             {/* two rows of three; beyond that, the rest open on request (like the sessions list) */}
             {partners.length > PARTNERS_STEP && (
-              <div className="flex justify-center">
+              <div className={`relative flex justify-center ${allPartners ? "pt-1" : "-mt-8"}`}>
                 <button
                   type="button"
                   onClick={() => setAllPartners((v) => !v)}

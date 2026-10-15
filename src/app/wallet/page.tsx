@@ -8,7 +8,7 @@ import OnboardingShell, {
   WalletIcon,
 } from "@/components/onboarding-shell";
 import { Arrow } from "@/components/ui/Arrow";
-import ConnectWalletForm from "./connect-wallet-form";
+import ConnectWalletForm from "./connect-wallet-form-lazy";
 
 export const metadata: Metadata = {
   title: "Connect your wallet — Si Her DeFi",

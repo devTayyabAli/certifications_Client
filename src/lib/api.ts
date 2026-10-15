@@ -988,3 +988,19 @@ export const eventsApi = {
 };
 
 
+
+/** The learner's private calendar-subscription links (every session, kept up to date). */
+export interface CalendarFeedLinks {
+  /** https feed URL — paste into Proton ("Add calendar from URL") or any calendar app */
+  url: string;
+  /** opens Apple Calendar's subscribe dialog */
+  webcalUrl: string;
+  googleUrl: string;
+  outlookUrl: string;
+}
+
+export const calendarFeedApi = {
+  async getLinks() {
+    return request<CalendarFeedLinks>("/calendar/feed-link", { method: "GET" });
+  },
+};

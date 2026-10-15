@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
+import { SubscribeCard } from "@/components/calendar/SubscribeCard";
 import { ScheduleModal } from "@/components/dashboard/ScheduleModal";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Check } from "@/components/ui/Check";
@@ -150,6 +151,8 @@ export default function CalendarView() {
             Every live session and LinkedIn Live in the cohort. Times are US Eastern, with your time ({tz()}) alongside.
           </p>
         </header>
+
+        <SubscribeCard />
 
         {failed && (
           <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] text-red-600">
