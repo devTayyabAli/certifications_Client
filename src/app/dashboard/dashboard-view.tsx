@@ -424,7 +424,6 @@ function FeaturedWhen({ m }: { m: ModuleItem }) {
       <time dateTime={m.scheduledDate!}>
         Live {when.weekday}, {when.month} {when.day} · {when.time}
       </time>
-      {!when.sameAsEt && <span className="font-normal text-white/65"> · {when.et}</span>}
       <StartsSoon iso={m.scheduledDate} />
     </p>
   );
@@ -461,7 +460,6 @@ function EventCard({ e }: { e: CohortEvent }) {
               {when.weekday}, {when.month} {when.day}
               {e.timeTba ? " · Time to be announced" : ` · ${when.time}`}
             </time>
-            {!e.timeTba && !when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
             <StartsSoon iso={e.timeTba ? null : e.date} />
           </p>
           {(e.subtitle || e.partnerName) && (
@@ -651,7 +649,6 @@ function SessionCard({
               <time dateTime={m.scheduledDate ?? undefined}>
                 {when.weekday}, {when.month} {when.day} · {when.time}
               </time>
-              {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
               <StartsSoon iso={m.sessionState === "upcoming" ? m.scheduledDate : null} />
             </p>
           )}

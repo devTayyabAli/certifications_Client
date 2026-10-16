@@ -674,6 +674,8 @@ export interface QuizQuestion {
 export interface QuizHint {
   /** Point in the recording to rewatch, e.g. "3:15" */
   timestamp: string;
+  /** End of the stretch when the CMS gives a range, e.g. "2:00" */
+  end?: string | null;
   title: string;
 }
 

@@ -11,8 +11,10 @@ import { Check } from '@/components/ui/Check';
 export function HintButton({ hint, onRewatch }: { hint: QuizHint; onRewatch?: (h: QuizHint) => void }) {
   const inner = (
     <>
-      <div className="flex items-center gap-2">
-        <span className="tabular-nums font-medium text-[#d97706]">{hint.timestamp}</span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-left">
+        <span className="tabular-nums font-semibold text-[#d97706] whitespace-nowrap">
+          Review {hint.timestamp}{hint.end ? ` – ${hint.end}` : ''}
+        </span>
         <span className="text-[#171730]">{hint.title || 'Rewatch this part of the session'}</span>
       </div>
       {onRewatch && <span className="text-[#d97706] font-medium">›</span>}

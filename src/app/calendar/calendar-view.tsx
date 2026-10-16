@@ -177,8 +177,7 @@ export default function CalendarView() {
         <header className="space-y-1.5">
           <h1 className="text-[26px] font-medium leading-[1.15] tracking-[-0.02em] text-[#151534] sm:text-[30px]">Calendar</h1>
           <p className="text-[14px] leading-6 text-[#4c4d77]">
-            Every live session and LinkedIn Live in the cohort, shown in your time zone ({tz()}), with US Eastern
-            time alongside.
+            Every live session and LinkedIn Live in the cohort, shown in your time zone ({tz()}).
           </p>
         </header>
 
@@ -333,7 +332,6 @@ function SessionRow({ m, onSchedule }: { m: ModuleItem; onSchedule: (m: ModuleIt
         <h3 className="mt-0.5 text-[15px] font-medium text-[#151534]">{m.title}</h3>
         <p className="mt-1 text-[12.5px] text-[#5f5f7a]">
           <time dateTime={m.scheduledDate!}>{when.time}</time>
-          {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
         </p>
         {m.presenter && (
           <p className="mt-0.5 text-[12.5px] text-[#7e7e96]">
@@ -391,7 +389,6 @@ function EventRow({ e, onSchedule }: { e: CohortEvent; onSchedule: (e: CohortEve
           ) : (
             <>
               <time dateTime={e.date}>{when.time}</time>
-              {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
             </>
           )}
         </p>
