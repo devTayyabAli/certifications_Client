@@ -4,7 +4,7 @@
 // The questions come from the CMS (written by the SI<3> team): any number, no character limit.
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Spinner } from '@/components/onboarding-shell';
+import { Skeleton, SkeletonPage } from '@/components/ui/Skeleton';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { LabelInput } from '@/components/ui/LabelInput';
 import { Arrow } from '@/components/ui/Arrow';
@@ -55,7 +55,28 @@ export default function Part2Page() {
       </div>
     );
   }
-  if (!data) return <div className="grid min-h-[60vh] place-items-center text-[#7c2ae8]"><Spinner className="size-6" /></div>;
+  if (!data) {
+    return (
+      <SkeletonPage label="Loading Part 2" className="mx-auto max-w-3xl space-y-6">
+        <Skeleton className="h-4 w-36" />
+        <div className="flex flex-col gap-5 rounded-3xl border border-[#ececf2] bg-white p-6 sm:flex-row sm:p-8">
+          <Skeleton className="size-14 shrink-0 rounded-2xl" />
+          <div className="flex-1 space-y-2.5">
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-4 w-full max-w-md" />
+          </div>
+        </div>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="space-y-3 rounded-2xl border border-[#ececf2] bg-white p-5 sm:p-6">
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-[132px] rounded-xl" />
+          </div>
+        ))}
+      </SkeletonPage>
+    );
+  }
 
   const back = <Link className="link-cta text-[12px] font-medium text-[#7c2ae8]" href="/dashboard"><Arrow dir="left" /> Back to dashboard</Link>;
   const name = profile?.name ? firstName(profile.name) : '';
@@ -88,7 +109,7 @@ export default function Part2Page() {
         </div>
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            {cert ? <CertificateArt cert={cert} preview={false} weekTitles={titles} /> : <div className="aspect-square rounded-2xl bg-white" />}
+            {cert ? <CertificateArt cert={cert} preview={false} weekTitles={titles} /> : <Skeleton className="aspect-square rounded-2xl" />}
           </div>
           <div className="space-y-4 lg:col-span-5">
             <div className="rounded-2xl border border-[#ececf2] bg-white p-6 space-y-4">

@@ -26,6 +26,14 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Link previews and older browsers ask for /favicon.ico at the site root,
+      // outside the basePath (a rewrite can't leave the basePath)
+      {
+        source: "/favicon.ico",
+        destination: "/siherdefi/favicon.ico",
+        basePath: false,
+        permanent: true,
+      },
       {
         source: "/",
         destination: "/siherdefi",

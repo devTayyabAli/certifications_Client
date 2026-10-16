@@ -8,6 +8,7 @@ import { useWallet } from '@/components/wallet-provider';
 import { Button } from '@/components/ui/Button';
 import { LabelInput } from '@/components/ui/LabelInput';
 import { Arrow } from '@/components/ui/Arrow';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { toDataUrl } from '@/lib/image';
 import {
   profileApi,
@@ -321,6 +322,7 @@ export default function SettingsPage() {
   const { profile, saveProfile } = useProfile();
   const { wallet, disconnect, openAppKit } = useWallet();
   const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [settingsFailed, setSettingsFailed] = useState(false);
   const [saving, setSaving] = useState<keyof UserSettings | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -335,7 +337,7 @@ export default function SettingsPage() {
     settingsApi
       .getSettings()
       .then(setSettings)
-      .catch(() => {});
+      .catch(() => setSettingsFailed(true));
   }, [router]);
 
   useEffect(() => {
@@ -472,11 +474,18 @@ export default function SettingsPage() {
                   Get updates when new modules, live sessions, and materials are published.
                 </p>
               </div>
-              <Toggle
-                on={!!settings?.emailNotifications}
-                disabled={!settings || saving === 'emailNotifications'}
-                onChange={(v) => update('emailNotifications', v)}
-              />
+              {/* until the saved preference loads, a placeholder rather than a misleading "off" */}
+              {settings ? (
+                <Toggle
+                  on={settings.emailNotifications}
+                  disabled={saving === 'emailNotifications'}
+                  onChange={(v) => update('emailNotifications', v)}
+                />
+              ) : settingsFailed ? (
+                <span className="shrink-0 text-[11px] text-[#b45309]">Couldn’t load</span>
+              ) : (
+                <Skeleton className="h-6 w-11 shrink-0 rounded-full" />
+              )}
             </div>
             <div className="py-3.5 flex items-center justify-between gap-4">
               <div>
@@ -486,11 +495,17 @@ export default function SettingsPage() {
                   page.
                 </p>
               </div>
-              <Toggle
-                on={!!settings?.onChainVerificationPrivacy}
-                disabled={!settings || saving === 'onChainVerificationPrivacy'}
-                onChange={(v) => update('onChainVerificationPrivacy', v)}
-              />
+              {settings ? (
+                <Toggle
+                  on={settings.onChainVerificationPrivacy}
+                  disabled={saving === 'onChainVerificationPrivacy'}
+                  onChange={(v) => update('onChainVerificationPrivacy', v)}
+                />
+              ) : settingsFailed ? (
+                <span className="shrink-0 text-[11px] text-[#b45309]">Couldn’t load</span>
+              ) : (
+                <Skeleton className="h-6 w-11 shrink-0 rounded-full" />
+              )}
             </div>
           </div>
         </section>

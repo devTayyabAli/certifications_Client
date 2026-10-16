@@ -7,6 +7,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
+import { SubscribeCard } from "@/components/calendar/SubscribeCard";
+import { Skeleton, SkeletonPage } from "@/components/ui/Skeleton";
+import { useNow } from "@/lib/use-now";
 import { ScheduleModal } from "@/components/dashboard/ScheduleModal";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Check } from "@/components/ui/Check";
@@ -14,18 +17,18 @@ import { eventsApi, isAuthenticated, modulesApi, type ModuleItem } from "@/lib/a
 import { sessionWhen, tz } from "@/lib/format";
 import type { CohortEvent } from "@/lib/types";
 
-/** The cohort runs on US Eastern time; days are grouped the way the dashboard shows them. */
-const COHORT_TZ = "America/New_York";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type Entry =
   | { kind: "session"; key: string; at: number; m: ModuleItem }
   | { kind: "event"; key: string; at: number; e: CohortEvent };
 
-/** "2026-11-05" for a moment, as a calendar date in the cohort's time zone. */
+/**
+ * "2026-11-05" for a moment, as a calendar date in the viewer's own time zone:
+ * a session late in the US evening sits on the next day for learners further east.
+ */
 function dayKey(iso: string | Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: COHORT_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -37,10 +40,6 @@ function dayKey(iso: string | Date) {
 const keyOf = (y: number, m: number, d: number) =>
   `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-/** "10:00 PM" in the learner's own zone, to sit next to the ET time. */
-function localTime(iso: string) {
-  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
-}
 
 const isDone = (m: ModuleItem) => !!m.quiz?.isPassed || !!m.quiz?.isSkipped;
 
@@ -53,6 +52,7 @@ export default function CalendarView() {
   const [viewState, setView] = useState<{ y: number; m: number } | null>(null);
   const [selectedState, setSelected] = useState<string | null>(null);
   const [scheduling, setScheduling] = useState<ModuleItem | null>(null);
+  const [schedulingEvent, setSchedulingEvent] = useState<CohortEvent | null>(null);
 
   // bumped after "Add to calendar" so the sessions reload with their new state
   const [reloads, setReloads] = useState(0);
@@ -100,9 +100,39 @@ export default function CalendarView() {
   if (loading) {
     return (
       <AppShell>
-        <div className="grid min-h-[60vh] place-items-center text-[#7c2ae8]">
-          <div className="size-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        </div>
+        <SkeletonPage label="Loading the calendar" className="mx-auto max-w-5xl space-y-6">
+          <div className="space-y-2.5">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-full max-w-[560px]" />
+          </div>
+          <Skeleton className="h-[104px] rounded-2xl" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {/* month grid */}
+            <div className="space-y-4 rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5 lg:col-span-7">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-36" />
+                <Skeleton className="h-7 w-28" />
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {Array.from({ length: 35 }, (_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                ))}
+              </div>
+            </div>
+            {/* the chosen day's sessions */}
+            <div className="space-y-3 lg:col-span-5">
+              <Skeleton className="h-5 w-48" />
+              {[0, 1].map((i) => (
+                <div key={i} className="space-y-3 rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-52" />
+                  <Skeleton className="h-3 w-64 max-w-full" />
+                  <Skeleton className="h-10 w-40 rounded-xl" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </SkeletonPage>
       </AppShell>
     );
   }
@@ -147,9 +177,12 @@ export default function CalendarView() {
         <header className="space-y-1.5">
           <h1 className="text-[26px] font-medium leading-[1.15] tracking-[-0.02em] text-[#151534] sm:text-[30px]">Calendar</h1>
           <p className="text-[14px] leading-6 text-[#4c4d77]">
-            Every live session and LinkedIn Live in the cohort. Times are US Eastern, with your time ({tz()}) alongside.
+            Every live session and LinkedIn Live in the cohort, shown in your time zone ({tz()}), with US Eastern
+            time alongside.
           </p>
         </header>
+
+        <SubscribeCard />
 
         {failed && (
           <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] text-red-600">
@@ -271,7 +304,7 @@ export default function CalendarView() {
                 x.kind === "session" ? (
                   <SessionRow key={x.m.slug} m={x.m} onSchedule={setScheduling} />
                 ) : (
-                  <EventRow key={x.e.id} e={x.e} />
+                  <EventRow key={x.e.id} e={x.e} onSchedule={setSchedulingEvent} />
                 )
               )
             )}
@@ -281,6 +314,7 @@ export default function CalendarView() {
         {scheduling && (
           <ScheduleModal module={scheduling} onClose={() => setScheduling(null)} onScheduled={reload} />
         )}
+        {schedulingEvent && <ScheduleModal event={schedulingEvent} onClose={() => setSchedulingEvent(null)} />}
       </div>
     </AppShell>
   );
@@ -299,7 +333,7 @@ function SessionRow({ m, onSchedule }: { m: ModuleItem; onSchedule: (m: ModuleIt
         <h3 className="mt-0.5 text-[15px] font-medium text-[#151534]">{m.title}</h3>
         <p className="mt-1 text-[12.5px] text-[#5f5f7a]">
           <time dateTime={m.scheduledDate!}>{when.time}</time>
-          <span className="text-[#9a9cbd]"> · {localTime(m.scheduledDate!)} your time</span>
+          {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
         </p>
         {m.presenter && (
           <p className="mt-0.5 text-[12.5px] text-[#7e7e96]">
@@ -341,8 +375,11 @@ function SessionRow({ m, onSchedule }: { m: ModuleItem; onSchedule: (m: ModuleIt
   );
 }
 
-function EventRow({ e }: { e: CohortEvent }) {
+function EventRow({ e, onSchedule }: { e: CohortEvent; onSchedule: (e: CohortEvent) => void }) {
   const when = sessionWhen(e.date, e.endDate);
+  const now = useNow();
+  // a confirmed time that's still ahead can go into the learner's own calendar
+  const canAdd = !e.timeTba && now > 0 && new Date(e.date).getTime() > now;
   return (
     <article className="space-y-3 rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5">
       <div>
@@ -354,7 +391,7 @@ function EventRow({ e }: { e: CohortEvent }) {
           ) : (
             <>
               <time dateTime={e.date}>{when.time}</time>
-              <span className="text-[#9a9cbd]"> · {localTime(e.date)} your time</span>
+              {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
             </>
           )}
         </p>
@@ -366,15 +403,22 @@ function EventRow({ e }: { e: CohortEvent }) {
           </p>
         )}
       </div>
-      {e.ctaActive === false ? (
-        <ButtonLink href={e.link} size="md" disabled showIcon={false} title="Registration opens soon">
-          {e.ctaText || "Save the Date"}
-        </ButtonLink>
-      ) : (
-        <ButtonLink href={e.link} external size="md">
-          {e.ctaText || (e.kind === "linkedin-live" ? "Join on LinkedIn" : "Open event")}
-        </ButtonLink>
-      )}
+      <div className="flex flex-wrap items-center gap-2.5">
+        {canAdd && (
+          <Button size="md" showIcon={false} onClick={() => onSchedule(e)}>
+            Add to calendar
+          </Button>
+        )}
+        {e.ctaActive === false ? (
+          <ButtonLink href={e.link} size="md" variant={canAdd ? "white" : "primary"} disabled showIcon={false} title="Registration opens soon">
+            {e.ctaText || "Save the Date"}
+          </ButtonLink>
+        ) : (
+          <ButtonLink href={e.link} external size="md" variant={canAdd ? "white" : "primary"}>
+            {e.ctaText || (e.kind === "linkedin-live" ? "Join on LinkedIn" : "Open event")}
+          </ButtonLink>
+        )}
+      </div>
     </article>
   );
 }

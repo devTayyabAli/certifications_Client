@@ -12,6 +12,7 @@ import { Check } from '@/components/ui/Check';
 import { ApiErrorResponse, certificateApi, type CertificateData } from '@/lib/api';
 import { claimErrorMessage, findLearnerProvider, sendClaim } from '@/lib/claim-badges';
 import { shortAddress } from '@/lib/format';
+import { explorerName } from '@/lib/certificate';
 
 type Step = 'review' | 'wallet' | 'confirming' | 'done' | 'slow' | 'error';
 
@@ -29,14 +30,6 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
     <span className="text-right font-medium text-[#171730]">{children}</span>
   </div>
 );
-
-/** "View on Etherscan" / "View on BaseScan", from where the link points */
-export function explorerName(url?: string | null) {
-  if (!url) return 'the block explorer';
-  if (/basescan/i.test(url)) return 'BaseScan';
-  if (/etherscan/i.test(url)) return 'Etherscan';
-  return 'the block explorer';
-}
 
 const STEPS: { id: Step; label: string }[] = [
   { id: 'wallet', label: 'Confirm in your wallet' },

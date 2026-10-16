@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/app/AppShell';
-import { Button, ButtonLink } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { LabelInput } from '@/components/ui/LabelInput';
 import { Arrow } from '@/components/ui/Arrow';
 import { Check } from '@/components/ui/Check';
@@ -119,7 +119,7 @@ export default function OnboardView() {
               </button>
             </div>
           ) : (
-            <div className="space-y-6 animate-pulse" aria-busy="true">
+            <div className="space-y-6 animate-pulse motion-reduce:animate-none" role="status" aria-busy="true" aria-label="Loading onboarding">
               <div className="h-5 w-40 rounded bg-[#ececf2]" />
               <div className="h-8 w-2/3 rounded bg-[#ececf2]" />
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -172,6 +172,11 @@ export default function OnboardView() {
   const isLast = questionIndex === questions.length - 1;
 
   const closeQuestions = async () => {
+    // Reviewing finished onboarding: nothing to save
+    if (isCompleted) {
+      setQuestionIndex(null);
+      return;
+    }
     await save({});
     setQuestionIndex(null);
     setModalError(null);
@@ -415,7 +420,15 @@ export default function OnboardView() {
               </div>
 
               {isCompleted ? (
-                <ButtonLink href="/dashboard">Back to dashboard</ButtonLink>
+                // Done: the questions and the learner's answers stay readable
+                <Button
+                  onClick={() => {
+                    setQuestionIndex(0);
+                    setModalError(null);
+                  }}
+                >
+                  Review your answers
+                </Button>
               ) : (
                 <>
                   <Button
@@ -439,9 +452,11 @@ export default function OnboardView() {
                   )}
                 </>
               )}
-              <p className="text-center text-[11px] font-medium text-[#8e8ea6]">
-                Required before the modules open
-              </p>
+              {!isCompleted && (
+                <p className="text-center text-[11px] font-medium text-[#8e8ea6]">
+                  Required before the modules open
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -463,8 +478,8 @@ export default function OnboardView() {
                 type="button"
                 disabled={isBusy}
                 onClick={closeQuestions}
-                aria-label="Close, your answers are saved"
-                title="Close, your answers are saved"
+                aria-label={isCompleted ? 'Close' : 'Close, your answers are saved'}
+                title={isCompleted ? 'Close' : 'Close, your answers are saved'}
                 className="absolute -right-3 -top-3 grid size-9 cursor-pointer place-items-center rounded-full border border-[#ececf2] bg-white text-[#5f5f7a] transition hover:text-[#171730] hover:bg-[#f8f8fc] disabled:opacity-50"
               >
                 <svg
@@ -521,7 +536,8 @@ export default function OnboardView() {
                   multiline
                   height={112}
                   corner={12}
-                  autoFocus
+                  autoFocus={!isCompleted}
+                  disabled={isCompleted}
                   maxLength={currentQ.maxLength}
                   placeholder={currentQ.placeholder}
                   value={currentAnswer}
@@ -557,6 +573,15 @@ export default function OnboardView() {
                 >
                   <Arrow dir="left" /> Back
                 </button>
+                {isCompleted ? (
+                  <Button
+                    size="md"
+                    showIcon={!isLast}
+                    onClick={() => (isLast ? closeQuestions() : setQuestionIndex(questionIndex + 1))}
+                  >
+                    {isLast ? 'Done' : 'Next'}
+                  </Button>
+                ) : (
                 <Button
                   size="md"
                   showIcon={!isLast}
@@ -575,6 +600,7 @@ export default function OnboardView() {
                 >
                   {isLast ? 'Submit' : 'Next'}
                 </Button>
+                )}
               </div>
             </div>
           </div>

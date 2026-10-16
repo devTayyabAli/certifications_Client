@@ -249,3 +249,11 @@ export async function downloadCertificatePng(opts: {
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** "View on Etherscan" / "View on BaseScan", from where the link points */
+export function explorerName(url?: string | null) {
+  if (!url) return 'the block explorer';
+  if (/basescan/i.test(url)) return 'BaseScan';
+  if (/etherscan/i.test(url)) return 'Etherscan';
+  return 'the block explorer';
+}

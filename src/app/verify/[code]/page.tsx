@@ -8,6 +8,7 @@ import { CertificateArt } from '@/components/certificate/CertificateArt';
 import { assetPath } from '@/lib/constants';
 import { certificateApi, type PublicCertificate, type CertificateData } from '@/lib/api';
 import { Check } from '@/components/ui/Check';
+import { Skeleton, SkeletonPage } from '@/components/ui/Skeleton';
 
 export default function VerifyCertificatePage() {
   const { code } = useParams<{ code: string }>();
@@ -75,9 +76,10 @@ export default function VerifyCertificatePage() {
             </p>
           </div>
         ) : loading || !certificateData ? (
-          <div className="grid min-h-[50vh] place-items-center text-[#7c2ae8]">
-            <div className="size-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          </div>
+          <SkeletonPage label="Checking the credential" className="space-y-5">
+            <Skeleton className="h-[46px] rounded-xl" />
+            <Skeleton className="aspect-square w-full rounded-2xl" />
+          </SkeletonPage>
         ) : (
           <>
             <div className="flex items-center gap-2.5 rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[12.5px] text-[#166534]">

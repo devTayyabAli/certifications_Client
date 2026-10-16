@@ -2,6 +2,7 @@
 // "Add to calendar" dialog
 import { useEffect, useState } from 'react';
 import { modulesApi, type ModuleItem } from '@/lib/api';
+import type { CohortEvent } from '@/lib/types';
 import { Button } from '@/components/ui/Button';
 import { sessionRange, tz } from '@/lib/format';
 import { Check } from '@/components/ui/Check';
@@ -11,6 +12,7 @@ import {
   generateGoogleCalendarUrl,
   generateOutlookCalendarUrl,
   moduleIcsUrl,
+  eventToSessionData,
   moduleToSessionData,
   PROTON_CALENDAR_URL,
 } from '@/lib/calendar';
@@ -77,17 +79,47 @@ function Option({
   );
 }
 
+/**
+ * "Add to calendar" for a live session (`module`) or a cohort event such as a
+ * LinkedIn Live (`event`). Sessions are also remembered in the database ("Added
+ * to calendar" on every device); events just go to the chosen calendar.
+ */
 export function ScheduleModal({
-  module: m,
+  module,
+  event,
   onClose,
   onScheduled,
 }: {
-  module: ModuleItem;
+  module?: ModuleItem;
+  event?: CohortEvent;
   onClose: () => void;
   onScheduled?: (m: ModuleItem) => void;
 }) {
+  const m = module ?? null;
+  // what the dialog shows, the same for either kind
+  const view = m
+    ? {
+        title: m.title,
+        start: m.scheduledDate,
+        end: m.endDate,
+        link: m.liveLink,
+        linkLabel: 'Ro.am link',
+        file: m.slug,
+        intro: 'Add this live cohort session to your calendar. You’ll get a reminder 15 minutes before it starts.',
+        copyLabel: 'Copy module details to clipboard',
+      }
+    : {
+        title: event!.title,
+        start: event!.date,
+        end: event!.endDate ?? null,
+        link: event!.linkIsPlaceholder ? null : event!.link,
+        linkLabel: event!.kind === 'linkedin-live' ? 'LinkedIn' : 'Event link',
+        file: event!.id.startsWith('event-') ? event!.id : `event-${event!.id}`,
+        intro: `Add this ${event!.kind === 'linkedin-live' ? 'LinkedIn Live' : 'event'} to your calendar. You’ll get a reminder 15 minutes before it starts.`,
+        copyLabel: 'Copy event details to clipboard',
+      };
   // reopening a session already added starts on the calendar the learner used
-  const [provider, setProvider] = useState<Provider>(m.scheduledProvider ?? 'google');
+  const [provider, setProvider] = useState<Provider>(m?.scheduledProvider ?? 'google');
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +133,7 @@ export function ScheduleModal({
     return () => document.removeEventListener('keydown', esc);
   }, [onClose]);
 
-  const sessionData = moduleToSessionData(m);
+  const sessionData = m ? moduleToSessionData(m) : eventToSessionData(event!);
 
   const handleCopy = async () => {
     const success = await copyEventDetails(sessionData);
@@ -120,7 +152,7 @@ export function ScheduleModal({
       window.open(generateOutlookCalendarUrl(sessionData), '_blank', 'noopener');
     } else if (provider === 'proton') {
       window.open(PROTON_CALENDAR_URL, '_blank', 'noopener');
-      downloadIcsFile(sessionData, `${m.slug}-proton.ics`);
+      downloadIcsFile(sessionData, `${view.file}-proton.ics`);
     } else if (provider === 'apple') {
       const url = moduleIcsUrl(sessionData);
       if (url) {
@@ -131,16 +163,21 @@ export function ScheduleModal({
         a.click();
         document.body.removeChild(a);
       } else {
-        downloadIcsFile(sessionData, `${m.slug}-apple.ics`);
+        downloadIcsFile(sessionData, `${view.file}-apple.ics`);
       }
     } else {
-      downloadIcsFile(sessionData, `${m.slug}.ics`);
+      downloadIcsFile(sessionData, `${view.file}.ics`);
     }
   };
 
   const add = async () => {
     setError(null);
     openInCalendar();
+    // events aren't tracked per learner: once the calendar has it, done
+    if (!m) {
+      onClose();
+      return;
+    }
     setBusy(true);
     try {
       // remembered in the database, so "Added to calendar" shows on every device
@@ -160,6 +197,7 @@ export function ScheduleModal({
 
   /** Clears "Added to calendar" in the app. The learner removes the event from their own calendar. */
   const remove = async () => {
+    if (!m) return;
     setError(null);
     setRemoving(true);
     try {
@@ -197,34 +235,34 @@ export function ScheduleModal({
         </button>
         <div className="pr-6">
           <h2 id="schedule-modal-title" className="text-[17.5px] font-medium text-[#171730] leading-snug">
-            {m.title}
+            {view.title}
           </h2>
-          {m.scheduledDate && (
+          {view.start && (
             <p className="mt-2 text-[12.5px] font-medium text-[#171730]">
-              {sessionRange(m.scheduledDate, m.endDate || m.scheduledDate)}
+              {sessionRange(view.start, view.end || view.start)}
             </p>
           )}
           <p className="mt-0.5 text-[11px] text-[#8e8ea6]">Shown in your time zone ({tz()})</p>
-          {m.calendarOutdated ? (
+          {m?.calendarOutdated ? (
             <p role="status" className="mt-2.5 rounded-lg border border-[#fde68a] bg-[#fffbeb] px-3 py-2 text-[12px] leading-relaxed text-[#92400e]">
               This session has moved since you added it. Add it again so your calendar has the new time,
               then remove the old event from your calendar.
             </p>
           ) : (
             <p className="mt-2 text-[12px] leading-relaxed text-[#5f5f7a]">
-              Add this live cohort session to your calendar. You’ll get a reminder 15 minutes before it starts.
+              {view.intro}
             </p>
           )}
-          {m.liveLink ? (
+          {view.link ? (
             <p className="mt-2.5 flex min-w-0 items-center gap-1.5 rounded-lg border border-[#e4e4ed] bg-[#f9fafc] px-2.5 py-1.5 text-[11px] text-[#5f5f7a]">
-              <span className="shrink-0 font-medium text-[#7c2ae8]">Ro.am link</span>
+              <span className="shrink-0 font-medium text-[#7c2ae8]">{view.linkLabel}</span>
               <a
-                href={m.liveLink}
+                href={view.link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="truncate text-[#171730] underline-offset-2 hover:text-[#7c2ae8] hover:underline"
               >
-                {m.liveLink}
+                {view.link}
               </a>
             </p>
           ) : null}
@@ -301,7 +339,7 @@ export function ScheduleModal({
             <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
-            <span>{copied ? <span className="inline-flex items-center gap-1.5">Copied <Check className="size-4" /></span> : 'Copy module details to clipboard'}</span>
+            <span>{copied ? <span className="inline-flex items-center gap-1.5">Copied <Check className="size-4" /></span> : view.copyLabel}</span>
           </button>
         </div>
         {error && (
@@ -313,7 +351,7 @@ export function ScheduleModal({
           <Button loading={busy} loadingLabel="Adding…" disabled={removing} showIcon={false} onClick={add}>
             {CTA[provider]}
           </Button>
-          {(m.isScheduled || m.calendarOutdated) && (
+          {(m?.isScheduled || m?.calendarOutdated) && (
             <button
               type="button"
               onClick={remove}

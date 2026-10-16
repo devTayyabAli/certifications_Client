@@ -29,7 +29,9 @@ import {
   type PartnerItem,
 } from "@/lib/api";
 import type { CohortEvent } from "@/lib/types";
-import { firstName, sessionWhen, shortAddress, tagCase, titleCase } from "@/lib/format";
+import { firstName, sessionWhen, shortAddress, tagCase, timeUntil, titleCase } from "@/lib/format";
+import { useNow } from "@/lib/use-now";
+import { Skeleton, SkeletonPage } from "@/components/ui/Skeleton";
 
 const TOTAL_BADGES = 12;
 const SESSIONS_STEP = 3;
@@ -350,6 +352,84 @@ const LinkedInMark = ({ className = "size-4" }: { className?: string }) => (
   </svg>
 );
 
+/** "Starts in 5 hours" for anything within two days: a countdown can't be misread across time zones. */
+function StartsSoon({ iso }: { iso: string | null | undefined }) {
+  const now = useNow();
+  if (!iso || !now) return null;
+  const ms = new Date(iso).getTime() - now;
+  if (ms <= 0 || ms > 48 * 3600e3) return null;
+  return (
+    <span className="ml-2 inline-flex items-center rounded-full bg-[#fff7ed] px-2 py-0.5 text-[11px] font-medium text-[#c2410c]">
+      Starts {timeUntil(iso)}
+    </span>
+  );
+}
+
+/** The dashboard's shape while it loads: header, profile + badges, featured session, session list. */
+function DashboardSkeleton() {
+  return (
+    <SkeletonPage label="Loading your dashboard" className="mx-auto max-w-5xl space-y-8">
+      <div className="space-y-3">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-full max-w-[480px]" />
+      </div>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="space-y-4 rounded-2xl border border-[#ececf2] bg-white p-6">
+          <div className="flex items-center gap-4">
+            <Skeleton className="size-16 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <Skeleton className="h-3 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+        <div className="space-y-4 rounded-2xl border border-[#ececf2] bg-white p-6">
+          <Skeleton className="h-4 w-32" />
+          <div className="flex gap-1.5">
+            {Array.from({ length: 12 }, (_, i) => (
+              <Skeleton key={i} className="h-2 flex-1 rounded-full" />
+            ))}
+          </div>
+          <Skeleton className="h-3 w-2/3" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-5 w-44" />
+        <Skeleton className="h-[240px] rounded-2xl" />
+        <Skeleton className="h-3 w-36" />
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-4 rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5">
+            <Skeleton className="h-[68px] w-[60px] shrink-0 rounded-xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-64 max-w-full" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+            <Skeleton className="hidden h-10 w-40 shrink-0 rounded-xl sm:block" />
+          </div>
+        ))}
+      </div>
+    </SkeletonPage>
+  );
+}
+
+/** The featured session's live time on the dark banner: the viewer's own time first. */
+function FeaturedWhen({ m }: { m: ModuleItem }) {
+  const when = sessionWhen(m.scheduledDate!, m.endDate || undefined);
+  return (
+    <p className="mt-1 text-[12.5px] font-medium text-white/90">
+      <time dateTime={m.scheduledDate!}>
+        Live {when.weekday}, {when.month} {when.day} · {when.time}
+      </time>
+      {!when.sameAsEt && <span className="font-normal text-white/65"> · {when.et}</span>}
+      <StartsSoon iso={m.scheduledDate} />
+    </p>
+  );
+}
+
 function EventCard({ e }: { e: CohortEvent }) {
   const when = sessionWhen(e.date, e.endDate);
   return (
@@ -381,6 +461,8 @@ function EventCard({ e }: { e: CohortEvent }) {
               {when.weekday}, {when.month} {when.day}
               {e.timeTba ? " · Time to be announced" : ` · ${when.time}`}
             </time>
+            {!e.timeTba && !when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
+            <StartsSoon iso={e.timeTba ? null : e.date} />
           </p>
           {(e.subtitle || e.partnerName) && (
             <p className="mt-1 line-clamp-2 text-[12.5px] leading-5 text-[#7e7e96]">
@@ -447,6 +529,7 @@ function FeaturedModule({
           {m.videoUrl ? "Session recording" : "Recording after the live session"}
         </span>
         <h3 className="mt-2 text-[20px] font-medium tracking-tight text-white">{m.title}</h3>
+        {upcoming && m.scheduledDate && <FeaturedWhen m={m} />}
         <p className="mt-1.5 max-w-xl text-[12px] leading-relaxed text-white/80 line-clamp-2">
           {m.description}
         </p>
@@ -568,6 +651,8 @@ function SessionCard({
               <time dateTime={m.scheduledDate ?? undefined}>
                 {when.weekday}, {when.month} {when.day} · {when.time}
               </time>
+              {!when.sameAsEt && <span className="text-[#9a9cbd]"> · {when.et}</span>}
+              <StartsSoon iso={m.sessionState === "upcoming" ? m.scheduledDate : null} />
             </p>
           )}
           <p
@@ -939,9 +1024,7 @@ function DashboardContent() {
   if (loading || !status) {
     return (
       <AppShell>
-        <div className="grid min-h-[60vh] place-items-center text-[#7c2ae8]">
-          <div className="size-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        </div>
+        <DashboardSkeleton />
       </AppShell>
     );
   }
@@ -1196,12 +1279,16 @@ function DashboardContent() {
                 <StartHere status={status} />
               </div>
             )}
-            <CertificateRow
-              unlocked={unlocked}
-              passed={modules.filter(isDone).length}
-              total={modules.length}
-            />
-            {unlocked && cert?.status !== "minted" && <ReadyToMint modules={modules.length} badges={earned} />}
+            {/* one certificate card at a time: the big "ready" banner replaces the row while it shows */}
+            {unlocked && cert?.status !== "minted" ? (
+              <ReadyToMint modules={modules.length} badges={earned} />
+            ) : (
+              <CertificateRow
+                unlocked={unlocked}
+                passed={modules.filter(isDone).length}
+                total={modules.length}
+              />
+            )}
           </div>
         </section>
 
@@ -1213,14 +1300,21 @@ function DashboardContent() {
                 <span className="text-[12.5px] text-[#8e8ea6]">{partnersCopy.subheading}</span>
               )}
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {(allPartners ? partners : partners.slice(0, PARTNERS_STEP)).map((p) => (
                 <PartnerCard key={p.id} p={p} />
               ))}
+              {/* the same fade as the sessions list, with the button sitting on it */}
+              {!allPartners && partners.length > PARTNERS_STEP && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-b from-[#f8f8fc]/0 via-[#f8f8fc]/80 to-[#f8f8fc] sm:h-24"
+                />
+              )}
             </div>
             {/* two rows of three; beyond that, the rest open on request (like the sessions list) */}
             {partners.length > PARTNERS_STEP && (
-              <div className="flex justify-center">
+              <div className={`relative flex justify-center ${allPartners ? "pt-1" : "-mt-8"}`}>
                 <button
                   type="button"
                   onClick={() => setAllPartners((v) => !v)}

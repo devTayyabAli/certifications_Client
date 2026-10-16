@@ -468,7 +468,7 @@ export default function ModuleView({ slug }: { slug: string }) {
   if (!m) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-[1040px] space-y-6 animate-pulse">
+        <div className="mx-auto max-w-[1040px] space-y-6 animate-pulse motion-reduce:animate-none" role="status" aria-busy="true" aria-label="Loading the session">
           <div className="h-4 w-32 rounded bg-[#ececf2]" />
           <div className="h-8 w-2/3 rounded bg-[#ececf2]" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -501,7 +501,10 @@ export default function ModuleView({ slug }: { slug: string }) {
           >
             <Arrow dir="left" /> Back to dashboard
           </Link>
-          <span className="text-[11px] font-medium text-[#8e8ea6]">{m.dateLabel}</span>
+          {/* the session's own time in the viewer's zone; the CMS label (written in ET) only when there's no date */}
+          <span className="text-[11px] font-medium text-[#8e8ea6]">
+            {m.scheduledDate ? dayTime(m.scheduledDate) : m.dateLabel}
+          </span>
         </div>
 
         <div>

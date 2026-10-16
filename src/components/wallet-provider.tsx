@@ -8,41 +8,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useAccount, useDisconnect } from "wagmi";
-import { useAppKit } from "@reown/appkit/react";
-import {
-  createPersistentStore,
-  usePersistentValue,
-} from "@/lib/persistent-store";
+import { BASE_CHAIN_ID, walletStore, type ConnectedWallet } from "@/lib/wallet-store";
+import { usePersistentValue } from "@/lib/persistent-store";
+import { hasStoredWalletSession, isWeb3Loaded, loadWeb3 } from "@/lib/web3/load";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const STORAGE_KEY = "siherdefi_wallet";
-const BASE_CHAIN_ID = "0x2105";
+export type { ConnectedWallet };
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-export type ConnectedWallet = {
-  address: string;
-  chainId: string;
-};
-
-/** Anything without an address is treated as "not connected". */
-const walletStore = createPersistentStore<ConnectedWallet | null>(
-  STORAGE_KEY,
-  null,
-  (parsed) => {
-    if (typeof parsed !== "object" || parsed === null) return null;
-    const candidate = parsed as Partial<ConnectedWallet>;
-    return candidate.address
-      ? { address: candidate.address, chainId: candidate.chainId ?? "" }
-      : null;
-  },
-);
 
 type WalletContextValue = {
   wallet: ConnectedWallet | null;
@@ -81,23 +55,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // component re-render every consumer.
   const wallet = usePersistentValue(walletStore);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { address: wagmiAddress, chainId: wagmiChainId, isConnected } = useAccount();
-  const { disconnect: wagmiDisconnect } = useDisconnect();
-  const { open: openAppKitModal } = useAppKit();
-
-  // Sync Wagmi / AppKit connected account into the persistent walletStore
-  useEffect(() => {
-    if (isConnected && wagmiAddress) {
-      const hexChain = wagmiChainId ? `0x${wagmiChainId.toString(16)}` : BASE_CHAIN_ID;
-      const current = walletStore.get();
-      if (!current || current.address.toLowerCase() !== wagmiAddress.toLowerCase() || current.chainId !== hexChain) {
-        walletStore.set({
-          address: wagmiAddress,
-          chainId: hexChain,
-        });
-      }
-    }
-  }, [isConnected, wagmiAddress, wagmiChainId]);
+  // The connected AppKit / wagmi account is copied into walletStore by the
+  // wallet libraries themselves (lib/web3/runtime), once they have loaded
 
   // Keep in sync when the browser extension's account or chain changes in the background
   useEffect(() => {
@@ -143,12 +102,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(() => {
     walletStore.clear();
-    try {
-      wagmiDisconnect();
-    } catch {
-      // ignore
+    // End the wallet session too, loading the wallet libraries only when there is one
+    if (isWeb3Loaded() || hasStoredWalletSession()) {
+      loadWeb3()
+        .then((m) => m.disconnectWallet())
+        .catch(() => {});
     }
-  }, [wagmiDisconnect]);
+  }, []);
 
   const openModal = useCallback(() => {
     setIsModalOpen(true);
@@ -158,9 +118,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setIsModalOpen(false);
   }, []);
 
+  // Loads the wallet libraries on first use, then opens the AppKit modal
   const openAppKit = useCallback(() => {
-    openAppKitModal();
-  }, [openAppKitModal]);
+    loadWeb3()
+      .then((m) => m.openWalletModal())
+      .catch(() => {});
+  }, []);
 
   return (
     <WalletContext.Provider
