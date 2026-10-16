@@ -590,7 +590,7 @@ function FeaturedModule({
           <span className="text-[11px] text-white/75">
             {!part1Done ? "Finish Part 1 to unlock · " : ""}
             {!upcoming && m.videoUrl ? "1 video · " : ""}
-            {m.quiz?.questionCount ?? 3} questions · 1 badge
+            {m.quiz?.questionCount ? `${m.quiz.questionCount} question${m.quiz.questionCount === 1 ? "" : "s"} · ` : ""}1 badge
           </span>
         </div>
         {part1Done && (

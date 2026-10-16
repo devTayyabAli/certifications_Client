@@ -21,7 +21,16 @@ export const VideoPlayer = forwardRef<PlayerHandle, {
 
   const toggle = () => { const v = video.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); };
   useImperativeHandle(ref, () => ({
-    seek: (s: number) => { const v = video.current; if (!v) return; v.currentTime = s; v.play().catch(() => {}); box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); },
+    seek: (s: number) => {
+      const v = video.current;
+      if (!v) return;
+      // Safari ignores a seek before the video's metadata has loaded: wait for it
+      const go = () => { v.currentTime = Number.isFinite(v.duration) ? Math.min(s, v.duration) : s; setT(v.currentTime); };
+      if (v.readyState >= 1) go();
+      else v.addEventListener('loadedmetadata', go, { once: true });
+      v.play().catch(() => {});
+      box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
   }));
   const pct = d ? (t / d) * 100 : 0;
   const chrome = `transition-opacity duration-300 ${playing ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`;

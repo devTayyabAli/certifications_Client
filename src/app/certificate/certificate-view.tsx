@@ -112,6 +112,9 @@ export default function CertificateView() {
   const c = cert.content;
   const locked = cert.status === 'locked';
   const minted = cert.status === 'minted';
+  // shown (and filling up with badges) all along, but claimable only after the last module
+  const certWaiting = !minted && cert.allModulesDone === false;
+  const left = cert.modulesLeft?.length ?? 0;
   const verifyUrl = cert.verifyUrl ?? '';
   const issued = cert.issuedAt ? new Date(cert.issuedAt) : null;
   const addToProfile = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(
@@ -335,15 +338,23 @@ export default function CertificateView() {
                         ? `Claim your badges (${cert.claimable!.moduleIds.length})`
                         : cert.status === 'locked'
                           ? 'Claim once it’s unlocked'
-                          : 'Claim your certificate'}
+                          : certWaiting
+                            ? 'Claim after the final module'
+                            : 'Claim your certificate'}
                   </h3>
                   <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
-                    {cert.claimable?.capstone || cert.status !== 'locked'
+                    {cert.claimable?.capstone || (cert.status !== 'locked' && !certWaiting)
                       ? 'Your certificate and badges'
                       : 'The badges you’ve earned'}{' '}
                     go to your wallet on {cert.onChain.network} as soulbound tokens: permanent and verifiable. You
                     confirm the claim in your wallet and pay the network fee.
                   </p>
+                  {certWaiting && (
+                    <p className="rounded-xl border border-[#ede4fb] bg-[#faf7ff] px-3 py-2 text-[11.5px] leading-relaxed text-[#5b21b6]">
+                      Your certificate can be claimed once every module is done
+                      {left > 0 ? ` (${left} to go)` : ''}. It fills up with your badges as you go.
+                    </p>
+                  )}
                   <div className="flex items-center justify-between rounded-xl border border-[#ececf2] bg-[#f9fafc] px-3 py-2 text-[11px]">
                     <span className="text-[#8e8ea6] font-medium text-[11px]">Claims to</span>
                     {cert.walletAddress ? (
@@ -362,7 +373,7 @@ export default function CertificateView() {
                   <Button disabled={!cert.canMint} showIcon={false} onClick={() => setMinting('new')}>
                     Claim on {cert.onChain.network}
                   </Button>
-                  {cert.status !== 'locked' && cert.claimable && !cert.claimable.capstone && cert.claimable.moduleIds.length === 0 && (
+                  {cert.status !== 'locked' && !certWaiting && cert.claimable && !cert.claimable.capstone && cert.claimable.moduleIds.length === 0 && (
                     <p className="text-[11px] text-[#8e8ea6]">Everything you’ve earned is already in your wallet.</p>
                   )}
                 </>

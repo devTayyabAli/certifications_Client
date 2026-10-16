@@ -433,6 +433,8 @@ export default function ModuleView({ slug }: { slug: string }) {
   const [quizOpen, setQuizOpen] = useState(false);
   const [scheduling, setScheduling] = useState<ModuleItem | null>(null);
   const player = useRef<PlayerHandle>(null);
+  // where the recording is (whole seconds), to mark the chapter that's playing; -1 = not started
+  const [position, setPosition] = useState(-1);
 
   const load = useCallback(async () => {
     try {
@@ -533,6 +535,7 @@ export default function ModuleView({ slug }: { slug: string }) {
                 src={m.videoUrl}
                 poster={m.thumbnailUrl}
                 label={`${m.companyTag} · Session recording`}
+                onTimeUpdate={(v) => setPosition(Math.floor(v.currentTime))}
               />
             ) : (
               <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#17142b] via-[#331c4b] to-[#121124] shadow-sm">
@@ -603,20 +606,45 @@ export default function ModuleView({ slug }: { slug: string }) {
               <div className="rounded-2xl border border-[#ececf2] bg-white p-6 shadow-2xs space-y-3">
                 <h3 className="text-[11px] font-medium text-[#8e8ea6]">In this session</h3>
                 <div className="divide-y divide-[#f0f0f5]">
-                  {m.chapters.map((c) => (
-                    <button
-                      key={c.time}
-                      type="button"
-                      onClick={() => player.current?.seek(toSeconds(c.time))}
-                      className="group flex w-full items-center justify-between py-3 text-left transition-colors cursor-pointer text-[#171730] hover:text-[#7c2ae8]"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="tabular-nums text-[12px] text-[#8e8ea6] w-12">{c.time}</span>
-                        <span className="text-[13px]">{c.title}</span>
-                      </div>
-                      <span className="text-[14px] text-[#b0b0c2] group-hover:text-[#7c2ae8]">›</span>
-                    </button>
-                  ))}
+                  {m.chapters.map((c, i) => {
+                    const start = toSeconds(c.time);
+                    const next = m.chapters[i + 1];
+                    const current =
+                      position >= 0 && position >= start && (!next || position < toSeconds(next.time));
+                    return (
+                      <button
+                        key={c.time}
+                        type="button"
+                        onClick={() => player.current?.seek(start)}
+                        aria-current={current ? 'true' : undefined}
+                        title={`Play from ${c.time}`}
+                        className={`group flex w-full items-center justify-between py-3 text-left transition-colors cursor-pointer hover:text-[#7c2ae8] ${
+                          current ? 'text-[#7c2ae8]' : 'text-[#171730]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`tabular-nums text-[12px] w-12 group-hover:text-[#7c2ae8] ${
+                              current ? 'text-[#7c2ae8] font-medium' : 'text-[#8e8ea6]'
+                            }`}
+                          >
+                            {c.time}
+                          </span>
+                          <span className={`text-[13px] ${current ? 'font-medium' : ''}`}>{c.title}</span>
+                        </div>
+                        <span
+                          className={`flex items-center gap-1.5 text-[11px] font-medium group-hover:text-[#7c2ae8] ${
+                            current ? 'text-[#7c2ae8]' : 'text-[#b0b0c2]'
+                          }`}
+                        >
+                          {current && <span>Now playing</span>}
+                          <svg className="size-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

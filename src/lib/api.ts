@@ -565,6 +565,10 @@ export interface CertificateData {
   totalBadges: number;
   /** Modules with an open quiz the learner hasn't passed yet */
   stillOpen: { week: number; title: string; slug: string }[];
+  /** the certificate can be claimed on-chain only once every module is done */
+  allModulesDone?: boolean;
+  /** modules not finished yet (passed or skipped) */
+  modulesLeft?: { week: number; title: string; slug: string }[];
   onChain: CertificateOnChain;
   /** earned badges (week numbers) and the certificate not yet in the wallet; null when unknown */
   claimable?: { moduleIds: number[]; capstone: boolean } | null;
