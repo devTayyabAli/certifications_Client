@@ -172,6 +172,7 @@ function QuizCard({
   onRestart: () => Promise<void>;
   onSkip: () => Promise<void>;
 }) {
+  const sessionOver = m.sessionState === 'processing' || m.sessionState === 'recorded';
   if (!quiz) {
     return (
       <div className={card}>
@@ -220,11 +221,13 @@ function QuizCard({
   if (!quiz.isOpen) {
     return (
       <div className={card}>
-        <span className="text-[11.5px] font-medium text-[#8e8ea6]">Opens after session</span>
+        <span className="text-[11.5px] font-medium text-[#8e8ea6]">{sessionOver ? 'Opening soon' : 'Opens after session'}</span>
         <div>
           <h4 className="text-[16.5px] font-medium text-[#171730]">Earn this module’s badge</h4>
           <p className="mt-1.5 text-[12.5px] leading-5 text-[#5f5f7a]">
-            The quiz opens after the live session{m.scheduledDate ? ` on ${dayTime(m.scheduledDate)}` : ''}.
+            {sessionOver
+              ? 'The quiz opens once the session recording is ready.'
+              : `The quiz opens after the live session${m.scheduledDate ? ` on ${dayTime(m.scheduledDate)}` : ''}.`}
           </p>
         </div>
       </div>

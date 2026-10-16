@@ -51,7 +51,8 @@ function Step({
         {state === 'done' ? <Check className="size-3.5" strokeWidth={2.4} /> : n}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-[#171730]">{title}</p>
+        {/* keeps the line breaks typed in the CMS */}
+        <p className="text-[13px] font-medium text-[#171730] whitespace-pre-line">{title}</p>
         <p className="text-[11px] text-[#8e8ea6]">{sub}</p>
         {children}
       </div>

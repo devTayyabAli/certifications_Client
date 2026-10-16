@@ -605,10 +605,15 @@ function FeaturedModule({
                 <span className="inline-block size-2 rounded-full bg-red-400 animate-pulse" />
                 <span className="text-[11px] text-white/75">Live now</span>
               </>
-            ) : (
+            ) : m.quiz?.isOpen ? (
               <>
                 <span className="inline-block size-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[11px] text-white/75">Quiz open</span>
+              </>
+            ) : (
+              <>
+                <span className="inline-block size-2 rounded-full bg-white/50" />
+                <span className="text-[11px] text-white/75">Recording coming soon</span>
               </>
             )}
           </div>
@@ -701,9 +706,13 @@ function SessionCard({
             <span className="rounded-full border border-[#e4e4ed] bg-[#f6f6fa] px-3 py-1 text-[12px] text-[#7e7e96]">
               Skipped · no badge
             </span>
-          ) : (
+          ) : m.quiz?.isOpen ? (
             <span className="rounded-full border border-[#ddd6fe] bg-[#f5f3ff] px-3 py-1 text-[12px] text-[#6d25d6]">
               Quiz open
+            </span>
+          ) : (
+            <span className="rounded-full border border-[#e4e4ed] bg-[#f6f6fa] px-3 py-1 text-[12px] text-[#7e7e96]">
+              Recording coming soon
             </span>
           )}
           <ButtonLink href={`/module/${m.slug}`} size="md">

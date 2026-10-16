@@ -93,7 +93,9 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
       <div className="text-center">
         <h3 id="quiz-closed-title" className="text-[18px] font-medium text-[#171730]">This quiz isn’t open yet</h3>
         <p className="mt-2 text-[12.5px] leading-relaxed text-[#5f5f7a]">
-          It opens after the live session{m.scheduledDate ? ` on ${dayTime(m.scheduledDate)}` : ''}.
+          {m.sessionState === 'processing' || m.sessionState === 'recorded'
+            ? 'It opens once the session recording is ready.'
+            : `It opens after the live session${m.scheduledDate ? ` on ${dayTime(m.scheduledDate)}` : ''}.`}
         </p>
         <div className="mt-5 flex justify-center"><Button size="md" showIcon={false} onClick={onClose}>Got it</Button></div>
       </div>
