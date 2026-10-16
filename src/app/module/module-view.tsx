@@ -336,10 +336,15 @@ function SpeakerCard({ s }: { s: SpeakerItem }) {
   return (
     <div className="rounded-2xl border border-[#ececf2] bg-white p-4 sm:p-5 shadow-2xs space-y-3.5 transition-all hover:border-[#dcdce8]">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="rounded bg-[#f0f0f5] px-2 py-0.5 text-[10px] font-medium text-[#5f5f7a]">
-          {s.companyTag || 'SPEAKER'}
-        </span>
-        <span className="text-[12px] font-medium text-[#171730]">{s.companyName}</span>
+        {s.companyLogoUrl ? (
+          <span className="flex h-7 items-center rounded-md border border-[#ececf2] bg-white px-1.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={s.companyLogoUrl} alt={s.companyName ? `${s.companyName} logo` : 'Company logo'} className="max-h-5 max-w-[88px] object-contain" />
+          </span>
+        ) : !s.companyName ? (
+          <span className="rounded bg-[#f0f0f5] px-2 py-0.5 text-[10px] font-medium text-[#5f5f7a]">{s.companyTag || 'SPEAKER'}</span>
+        ) : null}
+        {s.companyName && <span className="text-[12px] font-medium text-[#171730]">{s.companyName}</span>}
       </div>
       <div className="flex items-start gap-3">
         {s.headshotUrl ? (
