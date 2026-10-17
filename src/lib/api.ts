@@ -898,7 +898,7 @@ export interface OnboardContent {
   stepLabel: string;
   card: { title: string; description: string; imageUrl: string | null; doneMessage: string };
   page: { title: string; subtitle: string };
-  video: { url: string | null; posterUrl: string | null; caption: string; minutes: number | null };
+  video: { url: string | null; posterUrl: string | null; title?: string; description?: string; caption: string; minutes: number | null };
   questionsMinutes: number | null;
   tasks: { video: string; socials: string; questions: string };
   socialsHeading: string;

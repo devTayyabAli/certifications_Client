@@ -262,8 +262,8 @@ export default function OnboardView() {
               {/* What the video is about, and the watched indicator */}
               <div className="flex flex-col gap-4 rounded-2xl border border-[#ececf2] bg-white p-4 sm:flex-row sm:items-center sm:p-5">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium text-[#151534]">{VIDEO_TITLE}</p>
-                  <p className="mt-1 text-[12.5px] leading-5 text-[#5f5f7a]">{VIDEO_DESCRIPTION}</p>
+                  <p className="text-[15px] font-medium text-[#151534]">{content.video.title || VIDEO_TITLE}</p>
+                  <p className="mt-1 text-[12.5px] leading-5 text-[#5f5f7a] whitespace-pre-line">{content.video.description || VIDEO_DESCRIPTION}</p>
                   {content.video.minutes && (
                     <p className="mt-1.5 text-[12px] text-[#8e8ea6]">
                       {content.video.minutes} minutes
