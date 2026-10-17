@@ -53,7 +53,7 @@ function Step({
       <div className="min-w-0 flex-1">
         {/* keeps the line breaks typed in the CMS */}
         <p className="text-[13px] font-medium text-[#171730] whitespace-pre-line">{title}</p>
-        <p className="text-[11px] text-[#8e8ea6]">{sub}</p>
+        {sub && <p className="text-[11px] text-[#8e8ea6]">{sub}</p>}
         {children}
       </div>
     </div>
@@ -136,10 +136,9 @@ export default function OnboardView() {
 
   const socials = [...content.socials].sort((a, b) => a.order - b.order);
   const questions = [...content.questions].sort((a, b) => a.order - b.order);
-  const requiredSocials = socials.filter((s) => s.required);
   const followedSet = new Set(progress.followedSocialIds);
-  const followedCount = requiredSocials.filter((s) => followedSet.has(s.id)).length;
-  const socialsDone = requiredSocials.every((s) => followedSet.has(s.id));
+  // following is optional: it ticks the step, but never holds the questions back
+  const followedAll = socials.length > 0 && socials.every((s) => followedSet.has(s.id));
   const isCompleted = progress.status === 'completed';
   const hasAnswers = Object.values(progress.answers).some((a) => a?.trim());
 
@@ -162,11 +161,11 @@ export default function OnboardView() {
     }
   };
 
-  const steps: StepState[] = (() => {
-    const flags = [progress.videoWatched, socialsDone, isCompleted];
-    const firstOpen = flags.findIndex((f) => !f);
-    return flags.map((f, i) => (f ? 'done' : i === firstOpen ? 'current' : 'todo'));
-  })();
+  const steps: StepState[] = [
+    progress.videoWatched ? 'done' : 'current',
+    followedAll ? 'done' : 'todo',
+    isCompleted ? 'done' : progress.videoWatched ? 'current' : 'todo',
+  ];
 
   const currentQ = questionIndex !== null ? questions[questionIndex] : null;
   const currentAnswer = currentQ ? progress.answers[currentQ.id] ?? '' : '';
@@ -331,7 +330,7 @@ export default function OnboardView() {
           {/* Right Column: Task rail */}
           <div className="lg:col-span-4">
             <div className="rounded-2xl border border-[#ececf2] bg-white p-5 sm:p-6 shadow-xs space-y-4">
-              <h3 className="text-[11px] font-medium text-[#8e8ea6]">Your task</h3>
+              <h3 className="text-[11px] font-medium text-[#8e8ea6]">Si Her DeFi onboarding steps</h3>
 
               <div className="space-y-4">
                 <Step
@@ -345,9 +344,7 @@ export default function OnboardView() {
                   n={2}
                   state={steps[1]}
                   title={content.tasks.socials || content.socialsHeading || 'Follow us'}
-                  sub={`${followedCount} of ${requiredSocials.length} followed · ${
-                    requiredSocials.length === 2 ? 'Both required' : 'All required'
-                  }`}
+                  sub=""
                 >
                   <div className="mt-2.5 space-y-2">
                     {socials.map((soc) => {
@@ -433,7 +430,7 @@ export default function OnboardView() {
               ) : (
                 <>
                   <Button
-                    disabled={!progress.videoWatched || !socialsDone}
+                    disabled={!progress.videoWatched}
                     onClick={() => {
                       const firstOpen = questions.findIndex(
                         (x) => !progress.answers[x.id]?.trim(),
@@ -444,11 +441,9 @@ export default function OnboardView() {
                   >
                     {hasAnswers ? 'Resume questions' : 'Continue to questions'}
                   </Button>
-                  {!(progress.videoWatched && socialsDone) && (
+                  {!progress.videoWatched && (
                     <p className="text-center text-[11px] text-[#b45309]">
-                      {!progress.videoWatched
-                        ? `Watch ${Math.round(WATCH_THRESHOLD * 100)}% of Kara’s intro to unlock the next steps.`
-                        : 'Follow both accounts in step 2 to continue.'}
+                      Watch {Math.round(WATCH_THRESHOLD * 100)}% of Kara’s intro to unlock the next steps.
                     </p>
                   )}
                 </>
