@@ -1286,7 +1286,8 @@ function DashboardContent() {
               </div>
             )}
             {/* one certificate card at a time: the big "ready" banner replaces the row while it shows */}
-            {unlocked && cert?.status !== "minted" ? (
+            {/* "ready to mint" only once every module is done: the certificate can't be minted before */}
+            {unlocked && cert?.status !== "minted" && (cert?.allModulesDone ?? allDone) ? (
               <ReadyToMint modules={modules.length} badges={earned} />
             ) : (
               <CertificateRow
