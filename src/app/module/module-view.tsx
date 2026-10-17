@@ -208,7 +208,7 @@ function QuizCard({
           </div>
         </div>
         {certificateUnlocked ? (
-          <ButtonLink href="/certificate">View your certificate</ButtonLink>
+          <ButtonLink href="/certificate">View your achievements</ButtonLink>
         ) : (
           <ButtonLink href="/dashboard" variant="primary">
             Back to dashboard

@@ -521,6 +521,9 @@ export const modulesApi = {
 
 /** Certificate wording — managed in the CMS (Si Her DeFi (Base) → Certificate). */
 export interface CertificateContent {
+  pageTitle?: string;
+  /** empty = "cohort label · cohort dates · program name" */
+  pageSubtitle?: string;
   programName: string;
   cohortLabel: string;
   cohortDates: string;
@@ -541,6 +544,8 @@ export interface CertificateBadge {
   week: number | null;
   moduleTitle: string | null;
   earnedAt?: string;
+  /** ready-made posts for this badge, tagging the session's partners */
+  share?: { x: string; linkedin: string };
 }
 
 export interface CertificateOnChain {

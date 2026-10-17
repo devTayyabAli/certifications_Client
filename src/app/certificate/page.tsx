@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import CertificateView from "./certificate-view";
 
 export const metadata: Metadata = {
-  title: "Your Certificate — Si Her DeFi",
-  description: "Your Si Her DeFi certificate: share it, add it to LinkedIn, and verify it publicly.",
+  title: "Your Achievements — Si Her DeFi",
+  description: "Your Si Her DeFi badges and certificate: share your progress, and claim your certificate at the end of the cohort.",
 };
 
 export default function CertificatePage() {

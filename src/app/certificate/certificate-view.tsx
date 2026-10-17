@@ -26,6 +26,8 @@ import { certificateMintedStore, moduleCompletedStore } from '@/lib/cohort-progr
 const card = 'rounded-2xl border border-[#ececf2] bg-white p-5 sm:p-6 shadow-2xs space-y-3.5';
 const secondary =
   'w-full rounded-xl border border-[#e2e2ec] py-2.5 text-center text-[12.5px] font-medium text-[#171730] transition hover:bg-gray-50 active:scale-[0.99] cursor-pointer block disabled:opacity-50 disabled:cursor-wait';
+// greyed out (not "busy") while the cohort isn't complete
+const finalCta = `${secondary} disabled:cursor-not-allowed disabled:hover:bg-transparent`;
 
 export default function CertificateView() {
   const router = useRouter();
@@ -112,8 +114,9 @@ export default function CertificateView() {
   const c = cert.content;
   const locked = cert.status === 'locked';
   const minted = cert.status === 'minted';
-  // shown (and filling up with badges) all along, but claimable only after the last module
-  const certWaiting = !minted && cert.allModulesDone === false;
+  // shown (and filling up with badges) all along; claiming, LinkedIn, download and the
+  // public link open once every module is done
+  const complete = minted || (!locked && cert.allModulesDone === true);
   const left = cert.modulesLeft?.length ?? 0;
   const verifyUrl = cert.verifyUrl ?? '';
   const issued = cert.issuedAt ? new Date(cert.issuedAt) : null;
@@ -180,10 +183,10 @@ export default function CertificateView() {
 
         <div>
           <h1 className="text-[26px] sm:text-[28px] font-medium tracking-tight text-[#171730]">
-            Your certificate
+            {c.pageTitle || 'Your achievements'}
           </h1>
           <p className="mt-1 text-[13px] text-[#5f5f7a]">
-            {c.cohortLabel} · {c.cohortDates} · {c.programName}
+            {c.pageSubtitle || [c.cohortLabel, c.cohortDates, c.programName].filter(Boolean).join(' · ')}
           </p>
         </div>
 
@@ -214,74 +217,75 @@ export default function CertificateView() {
           </div>
 
           <div className="space-y-5 lg:col-span-4">
-            {locked && cert.unlockModule ? (
-              <div className={card}>
-                <span className="text-[11px] font-medium text-[#7c2ae8]">Locked</span>
-                <h3 className="text-[16px] font-medium text-[#171730]">Unlock your certificate</h3>
+            {/* Share each module badge: the cohort's viral loop, so it's open from the first badge */}
+            <div className={card}>
+              <span className="text-[11px] font-medium text-[#7c2ae8]">Share your progress</span>
+              <h3 className="text-[16px] font-medium text-[#171730]">
+                {cert.badges.length} of {cert.totalBadges} badges earned
+              </h3>
+              {cert.badges.length === 0 ? (
                 <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
-                  Pass the {cert.unlockModule.title} quiz to unlock it.
-                </p>
-                <ButtonLink href={`/module/${cert.unlockModule.slug}`}>
-                  Go to {cert.unlockModule.title}
-                </ButtonLink>
-              </div>
-            ) : (
-              <div className={card}>
-                <span className="text-[11px] font-medium text-[#7c2ae8]">
-                  {minted ? 'Minted' : 'Ready to share'}
-                </span>
-                <h3 className="text-[16px] font-medium text-[#171730]">
-                  {cert.badges.length} of {cert.totalBadges} badges earned
-                </h3>
-                <div className="space-y-2 pt-1">
-                  <ButtonLink href={addToProfile} external showIcon={false}>
-                    Add to LinkedIn profile <Arrow dir="up-right" />
-                  </ButtonLink>
-                  <a
-                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-                      verifyUrl,
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full rounded-xl bg-[#f4effe] py-2.5 text-center text-[12.5px] font-medium text-[#7c2ae8] transition hover:bg-[#ede5fc] active:scale-[0.99] cursor-pointer block"
-                  >
-                    Share on LinkedIn <Arrow dir="up-right" />
-                  </a>
-                  <button
-                    type="button"
-                    disabled={downloading}
-                    onClick={download}
-                    className={secondary}
-                  >
-                    {downloading ? 'Preparing image…' : 'Download image'}
-                  </button>
-                  <button type="button" onClick={copyLink} className={secondary}>
-                    {copied ? (
-                      <span className="inline-flex items-center gap-1.5 justify-center">
-                        Link copied <Check className="size-4" />
-                      </span>
-                    ) : (
-                      'Copy verification link'
-                    )}
-                  </button>
-                  {cert.verificationCode && (
-                    <a
-                      href={`/verify/${cert.verificationCode}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`${secondary} inline-flex items-center justify-center gap-1.5`}
-                    >
-                      <span>View public page</span>
-                      <Arrow dir="up-right" />
-                    </a>
+                  Pass a module quiz to earn your first badge, then share it here.
+                  {(cert.stillOpen?.[0] ?? cert.unlockModule) && (
+                    <>
+                      {' '}
+                      <Link
+                        href={`/module/${(cert.stillOpen?.[0] ?? cert.unlockModule)!.slug}`}
+                        className="font-medium text-[#7c2ae8] link-cta"
+                      >
+                        Go to {(cert.stillOpen?.[0] ?? cert.unlockModule)!.title}
+                      </Link>
+                    </>
                   )}
-                </div>
-                <p className="text-[10.5px] text-[#8e8ea6] leading-relaxed">
-                  “Add to profile” puts it under Licenses &amp; certifications; sharing posts it to
-                  your feed.
                 </p>
-              </div>
-            )}
+              ) : (
+                <>
+                  <ul className="space-y-2.5">
+                    {cert.badges.map((b) => (
+                      <li key={`${b.week}-${b.name}`} className="rounded-xl border border-[#ececf2] bg-[#fbfbfd] p-3">
+                        <div className="flex items-center gap-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={b.image} alt="" className="size-11 shrink-0 object-contain" />
+                          <div className="min-w-0">
+                            <p className="text-[12.5px] font-medium leading-snug text-[#171730]">{b.name}</p>
+                            {(b.week || b.moduleTitle) && (
+                              <p className="text-[11px] leading-snug text-[#8e8ea6]">
+                                {[b.week ? `Week ${b.week}` : null, b.moduleTitle].filter(Boolean).join(' · ')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-2.5 grid grid-cols-2 gap-2">
+                          <a
+                            href={`https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(
+                              b.share?.linkedin ?? `I just earned the "${b.name}" badge in Si Her DeFi! #SiHerDeFi`,
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0a66c2] py-2 text-[12px] font-medium text-white transition hover:bg-[#0958a8]"
+                          >
+                            LinkedIn <Arrow dir="up-right" />
+                          </a>
+                          <a
+                            href={`https://x.com/intent/post?text=${encodeURIComponent(
+                              b.share?.x ?? `I just earned the "${b.name}" badge in Si Her DeFi! #SiHerDeFi`,
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#111] py-2 text-[12px] font-medium text-white transition hover:bg-black"
+                          >
+                            X <Arrow dir="up-right" />
+                          </a>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[10.5px] leading-relaxed text-[#8e8ea6]">
+                    Each post is written for you and tags the session’s partners. You can edit it before posting.
+                  </p>
+                </>
+              )}
+            </div>
 
             <div className={card}>
               <span className="text-[11px] font-medium text-[#7c2ae8]">On {cert.onChain?.network || 'Base'}</span>
@@ -329,32 +333,13 @@ export default function CertificateView() {
                     View progress
                   </Button>
                 </>
-              ) : cert.onChain?.enabled ? (
+              ) : cert.onChain?.enabled && complete ? (
                 <>
-                  <h3 className="text-[15px] font-medium text-[#171730]">
-                    {cert.claimable?.capstone
-                      ? 'Claim your certificate'
-                      : (cert.claimable?.moduleIds.length ?? 0) > 0
-                        ? `Claim your badges (${cert.claimable!.moduleIds.length})`
-                        : cert.status === 'locked'
-                          ? 'Claim once it’s unlocked'
-                          : certWaiting
-                            ? 'Claim after the final module'
-                            : 'Claim your certificate'}
-                  </h3>
+                  <h3 className="text-[15px] font-medium text-[#171730]">Claim your certificate</h3>
                   <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
-                    {cert.claimable?.capstone || (cert.status !== 'locked' && !certWaiting)
-                      ? 'Your certificate and badges'
-                      : 'The badges you’ve earned'}{' '}
-                    go to your wallet on {cert.onChain.network} as soulbound tokens: permanent and verifiable. You
-                    confirm the claim in your wallet and pay the network fee.
+                    Your certificate and badges go to your wallet on {cert.onChain.network} as soulbound tokens:
+                    permanent and verifiable. You confirm the claim in your wallet and pay the network fee.
                   </p>
-                  {certWaiting && (
-                    <p className="rounded-xl border border-[#ede4fb] bg-[#faf7ff] px-3 py-2 text-[11.5px] leading-relaxed text-[#5b21b6]">
-                      Your certificate can be claimed once every module is done
-                      {left > 0 ? ` (${left} to go)` : ''}. It fills up with your badges as you go.
-                    </p>
-                  )}
                   <div className="flex items-center justify-between rounded-xl border border-[#ececf2] bg-[#f9fafc] px-3 py-2 text-[11px]">
                     <span className="text-[#8e8ea6] font-medium text-[11px]">Claims to</span>
                     {cert.walletAddress ? (
@@ -373,17 +358,22 @@ export default function CertificateView() {
                   <Button disabled={!cert.canMint} showIcon={false} onClick={() => setMinting('new')}>
                     Claim on {cert.onChain.network}
                   </Button>
-                  {cert.status !== 'locked' && !certWaiting && cert.claimable && !cert.claimable.capstone && cert.claimable.moduleIds.length === 0 && (
+                  {cert.claimable && !cert.claimable.capstone && cert.claimable.moduleIds.length === 0 && (
                     <p className="text-[11px] text-[#8e8ea6]">Everything you’ve earned is already in your wallet.</p>
                   )}
                 </>
               ) : (
                 <>
-                  <h3 className="text-[15px] font-medium text-[#171730]">Claiming opens soon</h3>
+                  <h3 className="text-[15px] font-medium text-[#171730]">Claim certificate upon cohort completion</h3>
                   <p className="text-[12px] leading-relaxed text-[#5f5f7a]">
                     Your certificate and badges will go to your wallet as soulbound tokens: permanent and
-                    verifiable. We’ll let you know when claiming opens.
+                    verifiable. You will be able to claim these at the end of the cohort.
                   </p>
+                  {!complete && left > 0 && (
+                    <p className="text-[11.5px] text-[#8e8ea6]">
+                      {left} {left === 1 ? 'module' : 'modules'} to go.
+                    </p>
+                  )}
                   <div className="flex items-center justify-between rounded-xl border border-[#ececf2] bg-[#f9fafc] px-3 py-2 text-[11px]">
                     <span className="text-[#8e8ea6] font-medium text-[11px]">Claims to</span>
                     {cert.walletAddress ? (
@@ -397,10 +387,55 @@ export default function CertificateView() {
                     )}
                   </div>
                   <Button disabled showIcon={false}>
-                    Coming soon
+                    Claim certificate
                   </Button>
                 </>
               )}
+
+              {/* the finished certificate: everything here opens at the end of the cohort */}
+              <div className="space-y-2 border-t border-[#f0f0f5] pt-3.5">
+                {complete ? (
+                  <ButtonLink href={addToProfile} external showIcon={false}>
+                    Add Certificate to LinkedIn <Arrow dir="up-right" />
+                  </ButtonLink>
+                ) : (
+                  <Button disabled showIcon={false}>
+                    Add Certificate to LinkedIn
+                  </Button>
+                )}
+                <button type="button" disabled={!complete || downloading} onClick={download} className={finalCta}>
+                  {downloading ? 'Preparing image…' : 'Download certificate'}
+                </button>
+                <button type="button" disabled={!complete} onClick={copyLink} className={finalCta}>
+                  {copied ? (
+                    <span className="inline-flex items-center gap-1.5 justify-center">
+                      Link copied <Check className="size-4" />
+                    </span>
+                  ) : (
+                    'Copy certificate link'
+                  )}
+                </button>
+                {complete && verifyUrl ? (
+                  <a
+                    href={verifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${finalCta} inline-flex items-center justify-center gap-1.5`}
+                  >
+                    <span>View public certificate</span>
+                    <Arrow dir="up-right" />
+                  </a>
+                ) : (
+                  <button type="button" disabled className={finalCta}>
+                    View public certificate
+                  </button>
+                )}
+                <p className="text-[10.5px] leading-relaxed text-[#8e8ea6]">
+                  {complete
+                    ? 'The certificate link opens a public page where anyone, such as an employer, can check your certificate is real.'
+                    : 'Available once you complete the cohort.'}
+                </p>
+              </div>
             </div>
 
             {cert.stillOpen && cert.stillOpen.length > 0 && (

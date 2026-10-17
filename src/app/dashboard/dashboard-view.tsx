@@ -804,13 +804,13 @@ function CertificateRow({
       </div>
       {unlocked ? (
         <ButtonLink href="/certificate" size="md" className="shrink-0 max-sm:w-full">
-          View certificate
+          View achievements
         </ButtonLink>
       ) : (
         <ButtonLink href="/certificate" size="md" disabled showIcon={false} className="shrink-0 max-sm:w-full">
           <span className="inline-flex items-center gap-2">
             {lockIcon}
-            <span>View certificate</span>
+            <span>View achievements</span>
           </span>
         </ButtonLink>
       )}
