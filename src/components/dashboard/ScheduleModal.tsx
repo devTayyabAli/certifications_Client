@@ -17,8 +17,9 @@ import {
   PROTON_CALENDAR_URL,
 } from '@/lib/calendar';
 
-type Provider = 'google' | 'apple' | 'outlook' | 'proton' | 'other';
+type Provider = 'email' | 'google' | 'apple' | 'outlook' | 'proton' | 'other';
 const CTA: Record<Provider, string> = {
+  email: 'Email me the invite',
   google: 'Add to Google Calendar',
   apple: 'Add to Apple Calendar',
   outlook: 'Add to Outlook',
@@ -118,9 +119,12 @@ export function ScheduleModal({
         intro: `Add this ${event!.kind === 'linkedin-live' ? 'LinkedIn Live' : 'event'} to your calendar. You’ll get a reminder 15 minutes before it starts.`,
         copyLabel: 'Copy event details to clipboard',
       };
-  // reopening a session already added starts on the calendar the learner used
-  const [provider, setProvider] = useState<Provider>(m?.scheduledProvider ?? 'google');
+  // reopening a session already added starts on the calendar the learner used;
+  // a session (not an event) starts on the emailed invite, which keeps itself up to date
+  const [provider, setProvider] = useState<Provider>(m?.scheduledProvider ?? (m ? 'email' : 'google'));
   const [busy, setBusy] = useState(false);
+  // the invite went out: the dialog says where, instead of closing
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -172,6 +176,19 @@ export function ScheduleModal({
 
   const add = async () => {
     setError(null);
+    if (provider === 'email' && m) {
+      setBusy(true);
+      try {
+        const r = await modulesApi.invite(m.slug);
+        setSentTo(r.sentTo);
+        onScheduled?.(m);
+      } catch (e) {
+        setError(e instanceof Error && e.message ? e.message : 'We couldn’t send the invite. Please try again.');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     openInCalendar();
     // events aren't tracked per learner: once the calendar has it, done
     if (!m) {
@@ -181,7 +198,7 @@ export function ScheduleModal({
     setBusy(true);
     try {
       // remembered in the database, so "Added to calendar" shows on every device
-      await modulesApi.schedule(m.slug, provider);
+      await modulesApi.schedule(m.slug, provider === 'email' ? 'other' : provider);
       onScheduled?.(m);
       onClose();
     } catch (e) {
@@ -210,6 +227,44 @@ export function ScheduleModal({
       setRemoving(false);
     }
   };
+
+  if (sentTo) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-xs"
+        onClick={onClose}
+      >
+        <div
+          className="relative w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-2xl border border-[#ececf2] text-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invite-sent-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mx-auto grid size-11 place-items-center rounded-full bg-[#f0fdf4] text-[#16a34a]">
+            <Check className="size-5" />
+          </div>
+          <h2 id="invite-sent-title" className="mt-3 text-[17px] font-medium text-[#171730]">
+            Invite sent
+          </h2>
+          <p className="mt-2 text-[12.5px] leading-relaxed text-[#5f5f7a]">
+            We emailed a calendar invite for <span className="font-medium text-[#171730]">{view.title}</span> to{' '}
+            <span className="font-medium text-[#171730] break-all">{sentTo}</span>. Open it and tap{' '}
+            <strong>Accept</strong> (or <strong>Yes</strong>) to add it to your calendar.
+          </p>
+          <p className="mt-2 text-[11.5px] leading-relaxed text-[#8e8ea6]">
+            If the time or link changes, you’ll get an update that changes the event in your calendar. Not
+            there in a few minutes? Check your spam folder.
+          </p>
+          <div className="mt-5">
+            <Button showIcon={false} onClick={onClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -268,6 +323,21 @@ export function ScheduleModal({
           ) : null}
         </div>
         <div className="mt-4.5 space-y-2.5">
+          {m && (
+            <Option
+              id="email"
+              selected={provider === 'email'}
+              onSelect={setProvider}
+              title="Email me an invite"
+              badge="Recommended"
+              body="Tap Accept in the email and it’s in your calendar (Proton, Gmail, Outlook, Apple). Changes update it automatically."
+              icon={
+                <svg className="size-5 text-[#7c2ae8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              }
+            />
+          )}
           <Option
             id="google"
             selected={provider === 'google'}
@@ -311,7 +381,7 @@ export function ScheduleModal({
             selected={provider === 'proton'}
             onSelect={setProvider}
             title="Proton Calendar"
-            body="End-to-end encrypted calendar by Proton"
+            body={m ? 'Imports a file. Easier: “Email me an invite” above.' : 'End-to-end encrypted calendar by Proton'}
             icon={
               <div className="grid size-5.5 place-items-center rounded bg-gradient-to-br from-[#6d4aff] to-[#a995ff] text-[10px] font-medium text-white leading-none shadow-2xs">P</div>
             }
@@ -358,7 +428,11 @@ export function ScheduleModal({
               disabled={busy || removing}
               className="w-full cursor-pointer py-1 text-center text-[12px] font-medium text-[#8e8ea6] transition hover:text-[#b91c1c] disabled:opacity-50"
             >
-              {removing ? 'Removing…' : 'Mark as not added'}
+              {removing
+                ? 'Removing…'
+                : m?.scheduledProvider === 'email'
+                  ? 'Remove and cancel the invite'
+                  : 'Mark as not added'}
             </button>
           )}
           <button

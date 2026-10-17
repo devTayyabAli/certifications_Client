@@ -437,7 +437,7 @@ export interface ModuleItem {
   quiz: ModuleQuizSummary;
   /** added to the learner's calendar, at the session's current date and time */
   isScheduled: boolean;
-  scheduledProvider: "google" | "apple" | "outlook" | "proton" | "other" | null;
+  scheduledProvider: "google" | "apple" | "outlook" | "proton" | "other" | "email" | null;
   /** added to a calendar, but the session has moved since: the learner should add it again */
   calendarOutdated?: boolean;
   addedToCalendarAt?: string | null;
@@ -489,6 +489,23 @@ export const modulesApi = {
     return request<any>(`/modules/${slugOrId}/schedule`, {
       method: "POST",
       body: JSON.stringify({ calendarType, timezone }),
+    });
+  },
+
+  /**
+   * Email the learner a calendar invite for the session (Accept adds it to their
+   * calendar; later changes to the session arrive as updates)
+   */
+  async invite(slugOrId: string) {
+    let timezone: string | undefined;
+    try {
+      timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      timezone = undefined;
+    }
+    return request<{ success: boolean; sentTo: string; resent: boolean }>(`/modules/${slugOrId}/invite`, {
+      method: "POST",
+      body: JSON.stringify({ timezone }),
     });
   },
 
@@ -673,6 +690,8 @@ export interface QuizQuestion {
   questionNumber: number;
   questionText: string;
   options: QuizQuestionOption[];
+  /** the part of the recording that covers this question */
+  hint?: QuizHint | null;
 }
 
 export interface QuizHint {
@@ -695,6 +714,8 @@ export interface QuizAnswerFeedback {
 
 export interface QuizAttemptResult {
   attemptNumber: number;
+  /** right so far in this set of attempts (carried over to a retake) */
+  solvedQuestions?: number[];
   score: number;
   totalQuestions: number;
   passingScore: number;
@@ -708,6 +729,8 @@ export interface QuizAttemptResult {
 }
 
 export interface QuizData {
+  /** answered correctly earlier in this set of attempts: a retake only asks the rest */
+  solvedQuestions?: number[];
   quizId: string;
   moduleSlug: string;
   title: string;

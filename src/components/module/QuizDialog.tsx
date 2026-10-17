@@ -43,14 +43,22 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
     });
     return map;
   });
+  // right in an earlier attempt of this set: carried over, not asked again
+  const [solved, setSolved] = useState(() => new Set(quiz.solvedQuestions ?? []));
+  const firstOpen = (skip: Set<number>, from = 0) => {
+    const i = questions.findIndex((q, n) => n >= from && !skip.has(q.questionNumber));
+    return i === -1 ? -1 : i;
+  };
   const [index, setIndex] = useState(() => {
-    const done = new Set((quiz.currentAttempt?.answers ?? []).map((a) => a.questionNumber));
-    const i = questions.findIndex((q) => !done.has(q.questionNumber));
+    const done = new Set([...(quiz.solvedQuestions ?? []), ...(quiz.currentAttempt?.answers ?? []).map((a) => a.questionNumber)]);
+    const i = firstOpen(done);
     return i === -1 ? 0 : i;
   });
+  const toAsk = questions.filter((x) => !solved.has(x.questionNumber));
   const [attempt, setAttempt] = useState(quiz.currentAttempt?.attemptNumber ?? (quiz.attemptsUsed || 0) + 1);
   const [picking, setPicking] = useState<string | null>(null);
-  const [result, setResult] = useState<QuizAttemptResult | null>(quiz.lastResult || null);
+  // an attempt in progress (e.g. back from rewatching) continues it rather than showing the last result
+  const [result, setResult] = useState<QuizAttemptResult | null>(quiz.currentAttempt ? null : quiz.lastResult || null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -162,7 +170,21 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
         <div className="mt-5 flex items-center justify-between border-t border-[#f0f0f5] pt-3.5">
           <button type="button" onClick={onClose} className="text-[12px] font-medium text-[#5f5f7a] hover:text-[#171730] cursor-pointer"><Arrow dir="left" /> Back to module</button>
           {result.attemptsRemaining > 0 && (
-            <Button size="md" onClick={() => { setResult(null); setAnswers({}); setIndex(0); setAttempt((a) => a + 1); }}>Try again</Button>
+            <Button
+              size="md"
+              onClick={() => {
+                const carried = new Set(result.solvedQuestions ?? []);
+                setSolved(carried);
+                setResult(null);
+                setAnswers({});
+                setIndex(Math.max(firstOpen(carried), 0));
+                setAttempt((a) => a + 1);
+              }}
+            >
+              {result.solvedQuestions && result.totalQuestions - result.solvedQuestions.length > 0
+                ? `Retake the ${result.totalQuestions - result.solvedQuestions.length} you missed`
+                : 'Try again'}
+            </Button>
           )}
         </div>
       </div>
@@ -180,12 +202,29 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
         <div className="flex flex-1 items-center gap-1.5">
           {questions.map((x, i) => {
             const a = answers[x.questionNumber];
-            return <div key={x.questionNumber} className={`h-1.5 flex-1 rounded-full transition-all ${a ? (a.isCorrect ? 'bg-[#16a34a]' : 'bg-[#ef4444]') : i === index ? 'bg-[#7c2ae8]' : 'bg-[#ececf2]'}`} />;
+            const color = solved.has(x.questionNumber) || a?.isCorrect
+              ? 'bg-[#16a34a]'
+              : a
+                ? 'bg-[#ef4444]'
+                : i === index
+                  ? 'bg-[#7c2ae8]'
+                  : 'bg-[#ececf2]';
+            return <div key={x.questionNumber} className={`h-1.5 flex-1 rounded-full transition-all ${color}`} />;
           })}
         </div>
-        <span className="text-[10px] font-medium text-[#8e8ea6] shrink-0 tabular-nums">Question {index + 1} of {questions.length}</span>
+        <span className="text-[10px] font-medium text-[#8e8ea6] shrink-0 tabular-nums">
+          {solved.size > 0
+            ? `Retake ${toAsk.findIndex((x) => x.questionNumber === q.questionNumber) + 1} of ${toAsk.length}`
+            : `Question ${index + 1} of ${questions.length}`}
+        </span>
       </div>
       <h3 id="quiz-question-title" className="mt-5 text-[15px] sm:text-[15.5px] font-medium text-[#171730] leading-snug">{q.questionText}</h3>
+      {/* where the session covers this question: shown up front, not only after a wrong answer */}
+      {q.hint && !answered && (
+        <div className="mt-3">
+          <HintButton hint={q.hint} onRewatch={onRewatch && !picking ? (h) => { onClose(); onRewatch(h); } : undefined} />
+        </div>
+      )}
       <div className="mt-4 space-y-2.5" role="radiogroup" aria-labelledby="quiz-question-title">
         {q.options.map((o) => {
           const selected = answered?.selectedOption === o.key || picking === o.key;
@@ -226,7 +265,7 @@ export function QuizDialog({ module: m, quiz, next, onClose, onFinished, onRewat
       <div className="mt-5 flex items-center justify-between border-t border-[#f0f0f5] pt-3.5">
         <button type="button" onClick={onClose} disabled={!!picking} className="text-[11.5px] font-medium text-[#5f5f7a] hover:text-[#171730] cursor-pointer disabled:opacity-50"><Arrow dir="left" /> Close</button>
         <span className="text-[10.5px] text-[#8e8ea6]">{answered ? 'Answer locked' : 'Choose an answer — it locks once picked'}</span>
-        <Button size="md" disabled={!answered} onClick={() => setIndex((i) => Math.min(i + 1, questions.length - 1))}>Next question</Button>
+        <Button size="md" disabled={!answered} onClick={() => setIndex((i) => { const n = firstOpen(solved, i + 1); return n === -1 ? i : n; })}>Next question</Button>
       </div>
     </>
   ));
