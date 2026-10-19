@@ -159,7 +159,7 @@ export default function ScheduleSessionModal({
           </p>
           <p className="mt-0.5 text-[11px] text-[#8e8ea6]">Shown in your time zone ({localTimeZone()})</p>
           <p className="mt-2 text-[12px] leading-relaxed text-[#5f5f7a]">
-            Add this live cohort session to your calendar. You’ll get a reminder 15 minutes before it starts.
+            Add this live cohort session to your calendar. You’ll get reminders 24 hours and 1 hour before it starts.
           </p>
         </div>
 

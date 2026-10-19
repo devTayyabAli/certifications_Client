@@ -783,7 +783,7 @@ function CertificateRow({
         </div>
         <div className="min-w-0">
           <h3 className="flex items-center gap-2 text-[15px] font-medium text-[#151534]">
-            Your certificate
+            Your achievements
             {!unlocked && (
               <span className="rounded-full bg-[#f1ecf8] px-2 py-0.5 text-[11px] font-medium text-[#8a6fb8]">
                 Locked
@@ -791,9 +791,7 @@ function CertificateRow({
             )}
           </h3>
           <p className="mt-1 text-[12.5px] leading-5 text-[#5f5f7a]">
-            {unlocked
-              ? "Minted on Base, with every badge you earned."
-              : "Finish every session and its quiz to unlock it. Then mint it on Base with the badges you earned."}
+            Earn a badge for every module you successfully pass.
           </p>
           {!unlocked && (
             <p className="mt-1 text-[12px] tabular-nums text-[#8e8ea6]">
@@ -1120,16 +1118,27 @@ function DashboardContent() {
               <BadgeSlots modules={modules} badges={badges} />
               {earned > 0 ? (
                 <ul className="mt-4 grid grid-cols-12 gap-1.5" aria-label="Your badges">
-                  {badges?.badges?.map((b) => (
-                    <li key={b.badgeId} title={b.name} className="max-w-10">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={assetPath(b.image)}
-                        alt={b.name}
-                        className="aspect-[8/9] w-full object-contain drop-shadow-[0_2px_4px_rgba(94,50,149,0.25)]"
-                      />
-                    </li>
-                  ))}
+                  {badges?.badges?.map((b) => {
+                    // each badge opens the session it was earned in
+                    const mod = modules.find((m) => m.badge?.name === b.name);
+                    const slug = mod?.slug ?? b.badgeId.replace(/^badge_/, "");
+                    return (
+                      <li key={b.badgeId} className="max-w-10">
+                        <Link
+                          href={`/module/${slug}`}
+                          title={mod ? `${b.name} · ${mod.title}` : b.name}
+                          className="block rounded-md transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-[#7c2ae8]"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={assetPath(b.image)}
+                            alt={mod ? `${b.name}, ${mod.title}` : b.name}
+                            className="aspect-[8/9] w-full object-contain drop-shadow-[0_2px_4px_rgba(94,50,149,0.25)]"
+                          />
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="mt-3 text-[12.5px] leading-5 text-[#7e7e96]">
@@ -1161,7 +1170,10 @@ function DashboardContent() {
                   <path d="M8 1.5l5.6 3.25v6.5L8 14.5l-5.6-3.25v-6.5z" />
                 </svg>
                 <span className="min-w-0 truncate">
-                  Next badge: <span className="font-medium text-[#151534]">{nextBadge.title}</span>
+                  Next badge:{" "}
+                  <Link href={`/module/${nextBadge.slug}`} className="font-medium text-[#151534] hover:text-[#7c2ae8] hover:underline">
+                    {nextBadge.title}
+                  </Link>
                 </span>
               </p>
             ) : null}

@@ -11,10 +11,14 @@ import { Arrow } from '@/components/ui/Arrow';
 import { Check } from '@/components/ui/Check';
 import { useCertificateUnlocked } from '@/lib/cohort-progress';
 import { dayTime, timeUntil } from '@/lib/format';
+import { BadgeShareButtons } from '@/components/certificate/BadgeShareButtons';
+import { assetPath } from '@/lib/constants';
 import {
+  certificateApi,
   modulesApi,
   onboardApi,
   quizApi,
+  type CertificateBadge,
   type ModuleItem,
   type QuizData,
   type QuizHint,
@@ -22,8 +26,6 @@ import {
 } from '@/lib/api';
 
 const card = 'rounded-2xl border border-[#ececf2] bg-white p-5 sm:p-6 shadow-2xs space-y-4';
-const share = (text: string) =>
-  `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
 
 /** Skipped quiz: start it over (fresh attempts) and open it straight away. */
 function TakeAgainButton({ onRestart }: { onRestart: () => Promise<void> }) {
@@ -208,7 +210,7 @@ function QuizCard({
           </div>
         </div>
         {certificateUnlocked ? (
-          <ButtonLink href="/certificate">View your achievements</ButtonLink>
+          <ButtonLink href="/certificate">View your achievement</ButtonLink>
         ) : (
           <ButtonLink href="/dashboard" variant="primary">
             Back to dashboard
@@ -435,19 +437,24 @@ export default function ModuleView({ slug }: { slug: string }) {
   const player = useRef<PlayerHandle>(null);
   // where the recording is (whole seconds), to mark the chapter that's playing; -1 = not started
   const [position, setPosition] = useState(-1);
+  // this module's badge, when the learner has earned it (with its share posts)
+  const [earned, setEarned] = useState<CertificateBadge | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [mod, list, q, st] = await Promise.all([
+      const [mod, list, q, st, cert] = await Promise.all([
         modulesApi.getOne(slug),
         modulesApi.getAll(),
         quizApi.getQuiz(slug).catch(() => null),
         onboardApi.getStatus().catch(() => ({ part1Done: true })),
+        // the ready-made share posts for this module's badge, once earned
+        certificateApi.getCertificate().catch(() => null),
       ]);
       setM(mod);
       setAll(list.sort((a, b) => a.week - b.week));
       setQuiz(q);
       setPart1Done(st.part1Done);
+      setEarned(cert?.badges.find((b) => b.moduleSlug === mod.slug || (b.week !== null && b.week === mod.week)) ?? null);
     } catch {
       setNotFound(true);
     }
@@ -494,12 +501,6 @@ export default function ModuleView({ slug }: { slug: string }) {
   const rewatch = (h: QuizHint) => player.current?.seek(toSeconds(h.timestamp));
   const review =
     quiz && !quiz.isPassed ? quiz.lastResult?.review.filter((r) => r.hint) ?? [] : [];
-  const shareText =
-    quiz && quiz.isPassed
-      ? `I just earned the "${quiz.badge.name}" badge in the Si Her DeFi cohort 🎉`
-      : `I'm learning "${m.title}" in the Si Her DeFi cohort${
-          m.partnerName && m.partnerName !== 'Si Her DeFi' ? ` with ${m.partnerName}` : ''
-        }.`;
 
   return (
     <AppShell>
@@ -693,19 +694,31 @@ export default function ModuleView({ slug }: { slug: string }) {
             )}
 
             <div className="rounded-2xl border border-[#ececf2] bg-white p-5 shadow-2xs space-y-3">
-              <h4 className="text-[13px] font-medium text-[#171730]">Share your progress</h4>
+              <h4 className="text-[13px] font-medium text-[#171730]">Share your achievement</h4>
               <p className="text-[11.5px] leading-relaxed text-[#8e8ea6]">
-                It doesn’t affect your badge or certificate.
+                Signal your professional network with your program progress.
               </p>
-              <a
-                href={share(shareText)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full rounded-xl border border-[#e2e2ec] py-2 text-center text-[12px] font-medium text-[#171730] transition hover:bg-gray-50 inline-flex items-center justify-center gap-1.5"
-              >
-                <span>Share on LinkedIn</span>
-                <Arrow dir="up-right" />
-              </a>
+              <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={assetPath(earned?.image ?? m.badge?.image ?? '/Badge_earned.png')}
+                  alt=""
+                  className={`size-11 shrink-0 object-contain ${earned ? '' : 'opacity-40 grayscale'}`}
+                />
+                <div className="min-w-0">
+                  <p className="text-[12.5px] font-medium leading-snug text-[#171730]">
+                    {earned?.name ?? m.badge?.name ?? `${m.title} badge`}
+                  </p>
+                  <p className="text-[11px] leading-snug text-[#8e8ea6]">{m.title}</p>
+                </div>
+              </div>
+              {earned ? (
+                <BadgeShareButtons badge={earned} />
+              ) : (
+                <p className="rounded-lg bg-[#f9fafc] px-3 py-2 text-[11.5px] leading-relaxed text-[#5f5f7a]">
+                  Pass this module’s quiz to earn the badge, then share it here.
+                </p>
+              )}
             </div>
           </div>
         </div>

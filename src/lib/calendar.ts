@@ -225,11 +225,14 @@ export function generateIcsContent(session: SessionData): string {
     "STATUS:CONFIRMED",
     "TRANSP:OPAQUE",
     "SEQUENCE:0",
-    "BEGIN:VALARM",
-    "TRIGGER:-PT15M",
-    "ACTION:DISPLAY",
-    `DESCRIPTION:Reminder: ${summary}`,
-    "END:VALARM",
+    // reminders a day and an hour before
+    ...["-P1D", "-PT1H"].flatMap((t) => [
+      "BEGIN:VALARM",
+      `TRIGGER:${t}`,
+      "ACTION:DISPLAY",
+      `DESCRIPTION:Reminder: ${summary}`,
+      "END:VALARM",
+    ]),
     "END:VEVENT",
     "END:VCALENDAR",
   ];

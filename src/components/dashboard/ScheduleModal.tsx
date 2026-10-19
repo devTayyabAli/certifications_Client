@@ -106,7 +106,7 @@ export function ScheduleModal({
         link: m.liveLink,
         linkLabel: 'Ro.am link',
         file: m.slug,
-        intro: 'Add this live cohort session to your calendar. You’ll get a reminder 15 minutes before it starts.',
+        intro: 'Add this live cohort session to your calendar. You’ll get reminders 24 hours and 1 hour before it starts.',
         copyLabel: 'Copy module details to clipboard',
       }
     : {
@@ -116,7 +116,7 @@ export function ScheduleModal({
         link: event!.linkIsPlaceholder ? null : event!.link,
         linkLabel: event!.kind === 'linkedin-live' ? 'LinkedIn' : 'Event link',
         file: event!.id.startsWith('event-') ? event!.id : `event-${event!.id}`,
-        intro: `Add this ${event!.kind === 'linkedin-live' ? 'LinkedIn Live' : 'event'} to your calendar. You’ll get a reminder 15 minutes before it starts.`,
+        intro: `Add this ${event!.kind === 'linkedin-live' ? 'LinkedIn Live' : 'event'} to your calendar. You’ll get reminders 24 hours and 1 hour before it starts.`,
         copyLabel: 'Copy event details to clipboard',
       };
   // reopening a session already added starts on the calendar the learner used;

@@ -86,11 +86,11 @@ function Nav({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigat
     <>
       <NavItem href="/dashboard" icon={Icon.dashboard} label="Dashboard" labelClassName={fadeCls} onNavigate={onNavigate}
         selected={path.startsWith('/dashboard') || path.startsWith('/module') || path.startsWith('/onboard')} />
-      <NavItem href="/calendar" icon={CalendarNavIcon} label="Calendar" labelClassName={fadeCls} onNavigate={onNavigate}
-        selected={path.startsWith('/calendar')} />
       <NavItem href="/certificate" icon={Icon.certificate} label="Achievements" labelClassName={fadeCls} onNavigate={onNavigate}
         selected={path.startsWith('/certificate')} locked={!certificateUnlocked} lockIcon={Icon.lock}
-        lockedHint="Unlocks once you finish every session and quiz" />
+        lockedHint="Unlocks once you earn your first badge" />
+      <NavItem href="/calendar" icon={CalendarNavIcon} label="Calendar" labelClassName={fadeCls} onNavigate={onNavigate}
+        selected={path.startsWith('/calendar')} />
       <NavItem href="/settings" icon={Icon.settings()} label="Settings" labelClassName={fadeCls} onNavigate={onNavigate}
         selected={path.startsWith('/settings')} />
     </>

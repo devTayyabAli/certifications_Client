@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { AppShell } from '@/components/app/AppShell';
 import { CertificateArt } from '@/components/certificate/CertificateArt';
+import { BadgeShareButtons } from '@/components/certificate/BadgeShareButtons';
+import { assetPath } from '@/lib/constants';
 import { Web3Boundary } from '@/components/web3-boundary';
 import { explorerName } from '@/lib/certificate';
 
@@ -243,39 +245,22 @@ export default function CertificateView() {
                   <ul className="space-y-2.5">
                     {cert.badges.map((b) => (
                       <li key={`${b.week}-${b.name}`} className="rounded-xl border border-[#ececf2] bg-[#fbfbfd] p-3">
-                        <div className="flex items-center gap-3">
+                        {/* the badge opens the session it was earned in */}
+                        <Link
+                          href={b.moduleSlug ? `/module/${b.moduleSlug}` : '/dashboard'}
+                          className="group flex items-center gap-3"
+                        >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={b.image} alt="" className="size-11 shrink-0 object-contain" />
+                          <img src={assetPath(b.image)} alt="" className="size-11 shrink-0 object-contain transition group-hover:-translate-y-0.5" />
                           <div className="min-w-0">
-                            <p className="text-[12.5px] font-medium leading-snug text-[#171730]">{b.name}</p>
-                            {(b.week || b.moduleTitle) && (
-                              <p className="text-[11px] leading-snug text-[#8e8ea6]">
-                                {[b.week ? `Week ${b.week}` : null, b.moduleTitle].filter(Boolean).join(' · ')}
-                              </p>
+                            <p className="text-[12.5px] font-medium leading-snug text-[#171730] group-hover:text-[#7c2ae8]">{b.name}</p>
+                            {b.moduleTitle && (
+                              <p className="text-[11px] leading-snug text-[#8e8ea6]">{b.moduleTitle}</p>
                             )}
                           </div>
-                        </div>
-                        <div className="mt-2.5 grid grid-cols-2 gap-2">
-                          <a
-                            href={`https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(
-                              b.share?.linkedin ?? `I just earned the "${b.name}" badge in Si Her DeFi! #SiHerDeFi`,
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0a66c2] py-2 text-[12px] font-medium text-white transition hover:bg-[#0958a8]"
-                          >
-                            LinkedIn <Arrow dir="up-right" />
-                          </a>
-                          <a
-                            href={`https://x.com/intent/post?text=${encodeURIComponent(
-                              b.share?.x ?? `I just earned the "${b.name}" badge in Si Her DeFi! #SiHerDeFi`,
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#111] py-2 text-[12px] font-medium text-white transition hover:bg-black"
-                          >
-                            X <Arrow dir="up-right" />
-                          </a>
+                        </Link>
+                        <div className="mt-2.5">
+                          <BadgeShareButtons badge={b} />
                         </div>
                       </li>
                     ))}

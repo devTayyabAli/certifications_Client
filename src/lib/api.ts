@@ -524,6 +524,8 @@ export interface CertificateContent {
   pageTitle?: string;
   /** empty = "cohort label · cohort dates · program name" */
   pageSubtitle?: string;
+  /** the certificate artwork uploaded in the CMS; empty = the built-in design */
+  certificateImage?: string | null;
   programName: string;
   cohortLabel: string;
   cohortDates: string;
@@ -543,6 +545,8 @@ export interface CertificateBadge {
   image: string;
   week: number | null;
   moduleTitle: string | null;
+  /** the module the badge was earned in, for linking back to the session */
+  moduleSlug?: string | null;
   earnedAt?: string;
   /** ready-made posts for this badge, tagging the session's partners */
   share?: { x: string; linkedin: string };

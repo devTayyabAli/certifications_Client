@@ -49,7 +49,14 @@ export const CertificateArt = forwardRef<HTMLDivElement, { cert: Certificate | a
   return (
     <div ref={ref} className="relative w-full overflow-hidden rounded-2xl bg-[#FCFBFF] shadow-md [container-type:inline-size]" style={{ aspectRatio: '1 / 1' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={assetPath('/v2/certificate-base.svg')} alt="" className="absolute inset-0 size-full select-none" draggable={false} />
+      {/* the CMS artwork when the team uploads one (fetched with CORS so "Download certificate" can include it) */}
+      <img
+        src={cert.content?.certificateImage || assetPath('/v2/certificate-base.svg')}
+        crossOrigin={cert.content?.certificateImage ? 'anonymous' : undefined}
+        alt=""
+        className="absolute inset-0 size-full object-cover select-none"
+        draggable={false}
+      />
 
       <div className={`absolute inset-0 ${preview ? 'opacity-60' : ''}`}>
         {/* name */}
