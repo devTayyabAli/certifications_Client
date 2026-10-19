@@ -314,7 +314,7 @@ export interface CohortEvent {
   ctaText?: string;
 }
 
-/** Onboarding Part 2: a short close-out reflection, opens once every session and quiz is done. */
+/** Onboarding Part 2: a short close-out reflection, opens when the team switches it on. */
 export interface Part2 {
   title: string;
   subtitle: string;

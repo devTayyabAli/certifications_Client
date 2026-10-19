@@ -1,5 +1,5 @@
 'use client';
-// Onboarding Part 2 — a short close-out reflection. Opens once every session and its quiz are done;
+// Onboarding Part 2 — a short close-out reflection. Opens when the team switches it on in the CMS;
 // finishing it completes onboarding (2 of 2) and points to minting the certificate.
 // The questions come from the CMS (written by the SI<3> team): any number, no character limit.
 import Link from 'next/link';
@@ -88,7 +88,7 @@ export default function Part2Page() {
         <div className="rounded-2xl border border-[#ececf2] bg-white p-6 space-y-3">
           <span className="text-[12px] text-[#a894c8]">Part 2 · Locked</span>
           <h1 className="text-[22px] font-medium tracking-tight text-[#171730]">{data.title}</h1>
-          <p className="text-[13px] leading-6 text-[#5f5f7a]">It opens once you’ve finished every session and its quiz.</p>
+          <p className="text-[13px] leading-6 text-[#5f5f7a]">It opens later in the cohort. We’ll let you know when it’s ready.</p>
         </div>
       </div>
     );

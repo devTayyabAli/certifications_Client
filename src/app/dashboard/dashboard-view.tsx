@@ -175,7 +175,7 @@ function ProfileCard({ profile }: { profile: any }) {
 }
 
 const PART2_TITLE = "Close out your cohort";
-const PART2_LOCKED = "Opens once you’ve finished every session and its quiz.";
+const PART2_LOCKED = "Opens later in the cohort. We’ll let you know when it’s ready.";
 
 function StartHere({ status }: { status: OnboardStatusResponse }) {
   const defaultCard = {
@@ -254,7 +254,7 @@ function StartHere({ status }: { status: OnboardStatusResponse }) {
                   <p className="text-[12px] text-[#7c2ae8]">Part 2 · Open now</p>
                   <h3 className="mt-0.5 text-[15px] font-medium text-[#151534]">{PART2_TITLE}</h3>
                   <p className="mt-0.5 text-[12.5px] leading-5 text-[#5f5f7a]">
-                    You’ve finished every session. Close out the cohort in about 5 minutes.
+                    Close out the cohort in about 5 minutes.
                   </p>
                 </div>
               </div>
