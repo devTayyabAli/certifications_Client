@@ -540,6 +540,8 @@ export interface CertificateContent {
   linkedinOrganizationName: string;
   linkedinOrganizationId: string | null;
   shareText: string;
+  /** cohort label, dates and program name, in the CMS field order */
+  detailsLine?: string;
 }
 
 export interface CertificateBadge {
