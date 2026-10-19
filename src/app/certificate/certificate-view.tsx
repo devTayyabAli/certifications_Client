@@ -185,7 +185,7 @@ export default function CertificateView() {
 
         <div>
           <h1 className="text-[26px] sm:text-[28px] font-medium tracking-tight text-[#171730]">
-            {c.pageTitle || 'Your achievements'}
+            {c.pageTitle || 'Your Achievements'}
           </h1>
           <p className="mt-1 text-[13px] text-[#5f5f7a]">
             {c.pageSubtitle || [c.cohortLabel, c.cohortDates, c.programName].filter(Boolean).join(' · ')}

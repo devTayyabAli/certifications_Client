@@ -442,6 +442,8 @@ export interface ModuleItem {
   calendarOutdated?: boolean;
   addedToCalendarAt?: string | null;
   speakers: SpeakerItem[];
+  /** the badge post, with CMS wording and partner tags filled in */
+  share?: { x: string; linkedin: string } | null;
 }
 
 export const modulesApi = {

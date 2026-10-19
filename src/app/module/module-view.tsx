@@ -712,13 +712,12 @@ export default function ModuleView({ slug }: { slug: string }) {
                   <p className="text-[11px] leading-snug text-[#8e8ea6]">{m.title}</p>
                 </div>
               </div>
-              {earned ? (
-                <BadgeShareButtons badge={earned} />
-              ) : (
-                <p className="rounded-lg bg-[#f9fafc] px-3 py-2 text-[11.5px] leading-relaxed text-[#5f5f7a]">
-                  Pass this module’s quiz to earn the badge, then share it here.
-                </p>
-              )}
+              <BadgeShareButtons
+                badge={{
+                  name: earned?.name ?? m.badge?.name ?? m.title,
+                  share: m.share ?? earned?.share,
+                }}
+              />
             </div>
           </div>
         </div>
