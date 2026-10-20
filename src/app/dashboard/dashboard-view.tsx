@@ -985,6 +985,7 @@ function DashboardContent() {
   const [modules, setModules] = useState<ModuleItem[]>([]);
   const [badges, setBadges] = useState<BadgesResponse | null>(null);
   const [cert, setCert] = useState<CertificateData | null>(null);
+  const [certReady, setCertReady] = useState(false);
   const [partners, setPartners] = useState<PartnerItem[]>([]);
   const [scheduling, setScheduling] = useState<ModuleItem | null>(null);
   const [shown, setShown] = useState(SESSIONS_STEP);
@@ -999,23 +1000,30 @@ function DashboardContent() {
       return;
     }
     try {
-      const [s, m, b, c, p] = await Promise.allSettled([
+      // The session list is the page. Badges, the certificate and partners fill in
+      // after it, so a slow extra call doesn't keep the skeleton up.
+      const [s, m] = await Promise.allSettled([
         onboardApi.getStatus(),
         modulesApi.getAll(),
-        badgeApi.getBadges(),
-        certificateApi.getCertificate(),
-        partnerApi.getPartners(),
       ]);
-
       if (s.status === "fulfilled") setStatus(s.value);
       if (m.status === "fulfilled" && Array.isArray(m.value)) {
         setModules([...m.value].sort((a, z) => a.week - z.week));
       }
-      if (b.status === "fulfilled") setBadges(b.value);
-      if (c.status === "fulfilled") setCert(c.value);
-      if (p.status === "fulfilled" && Array.isArray(p.value)) setPartners(p.value);
+
+      badgeApi.getBadges().then(setBadges).catch(() => {});
+      certificateApi
+        .getCertificate()
+        .then(setCert)
+        .catch(() => {})
+        .finally(() => setCertReady(true));
+      partnerApi.getPartners().then((p) => {
+        if (Array.isArray(p)) setPartners(p);
+      }).catch(() => {});
       eventsApi.getAll().then(setEvents).catch(() => {});
       partnerApi.getCopy().then(setPartnersCopy).catch(() => {});
+    } catch {
+      // status or the module list failed — stay on the skeleton only when status never arrived
     } finally {
       setLoading(false);
     }
@@ -1111,12 +1119,14 @@ function DashboardContent() {
               <div className="flex items-baseline justify-between">
                 <h3 className="text-[15px] font-medium text-[#151534]">Badges earned</h3>
                 <span className="text-[13px] font-medium text-[#151534] tabular-nums">
-                  {earned}
+                  {badges ? earned : <span className="inline-block h-3.5 w-4 rounded bg-[#ececf2] align-middle" />}
                   <span className="font-medium text-[#9a9cbd]"> / {TOTAL_BADGES}</span>
                 </span>
               </div>
               <BadgeSlots modules={modules} badges={badges} />
-              {earned > 0 ? (
+              {badges == null ? (
+                <div className="mt-3 h-5 w-2/3 rounded bg-[#ececf2] animate-pulse motion-reduce:animate-none" />
+              ) : earned > 0 ? (
                 <ul className="mt-4 grid grid-cols-12 gap-1.5" aria-label="Your badges">
                   {badges?.badges?.map((b) => {
                     // each badge opens the session it was earned in
@@ -1189,18 +1199,15 @@ function DashboardContent() {
 
         <section className="space-y-5">
           <div className="flex items-center justify-between">
-            {unlocked ? (
-              <>
-                <h2 className={sectionTitle}>Your learning path</h2>
-                <span className="text-[12.5px] font-medium text-[#16a34a]">● Certificate unlocked</span>
-              </>
+            <h2 className={sectionTitle}>Your learning path</h2>
+            {!certReady ? (
+              <span className="h-4 w-48 rounded bg-[#ececf2] animate-pulse motion-reduce:animate-none" />
+            ) : unlocked ? (
+              <span className="text-[12.5px] font-medium text-[#16a34a]">● Certificate unlocked</span>
             ) : (
-              <>
-                <h2 className={sectionTitle}>Your learning path</h2>
-                <span className="text-[12.5px] text-[#8e8ea6]">
-                  {status.part1Done ? "Finish every session to unlock your certificate" : "Opens once Part 1 is done"}
-                </span>
-              </>
+              <span className="text-[12.5px] text-[#8e8ea6]">
+                {status.part1Done ? "Finish every session to unlock your certificate" : "Opens once Part 1 is done"}
+              </span>
             )}
           </div>
           <div className="space-y-4">
@@ -1299,7 +1306,9 @@ function DashboardContent() {
             )}
             {/* one certificate card at a time: the big "ready" banner replaces the row while it shows */}
             {/* "ready to mint" only once every module is done: the certificate can't be minted before */}
-            {unlocked && cert?.status !== "minted" && (cert?.allModulesDone ?? allDone) ? (
+            {!certReady ? (
+              <div className="h-24 rounded-2xl bg-[#ececf2] animate-pulse motion-reduce:animate-none" />
+            ) : unlocked && cert?.status !== "minted" && (cert?.allModulesDone ?? allDone) ? (
               <ReadyToMint modules={modules.length} badges={earned} />
             ) : (
               <CertificateRow

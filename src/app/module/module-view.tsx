@@ -430,6 +430,7 @@ export default function ModuleView({ slug }: { slug: string }) {
   const [m, setM] = useState<ModuleItem | null>(null);
   const [all, setAll] = useState<ModuleItem[]>([]);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
+  const [quizPending, setQuizPending] = useState(true);
   const [part1Done, setPart1Done] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [quizOpen, setQuizOpen] = useState(false);
@@ -440,28 +441,50 @@ export default function ModuleView({ slug }: { slug: string }) {
   // this module's badge, when the learner has earned it (with its share posts)
   const [earned, setEarned] = useState<CertificateBadge | null>(null);
 
-  const load = useCallback(async () => {
+  const loadId = useRef(0);
+  const load = useCallback(async (opts?: { fresh?: boolean }) => {
+    const id = ++loadId.current;
+    const current = () => id === loadId.current;
+    if (opts?.fresh) {
+      setM(null);
+      setQuiz(null);
+      setAll([]);
+      setNotFound(false);
+    }
+    setQuizPending(true);
+    const modulePromise = modulesApi.getOne(slug);
+    const listPromise = modulesApi.getAll().catch(() => null);
+    const quizPromise = quizApi.getQuiz(slug).catch(() => null);
+    const statusPromise = onboardApi.getStatus().catch(() => ({ part1Done: true as const }));
+    const certPromise = certificateApi.getCertificate().catch(() => null);
+
+    // The session itself can paint before the full catalog, quiz, and certificate arrive.
+    modulePromise.then((mod) => {
+      if (current()) setM(mod);
+    }).catch(() => {
+      if (current()) setNotFound(true);
+    });
+    listPromise.then((list) => {
+      if (current() && list) setAll([...list].sort((a, b) => a.week - b.week));
+    });
+    statusPromise.then((st) => {
+      if (current()) setPart1Done(st.part1Done);
+    });
+
     try {
-      const [mod, list, q, st, cert] = await Promise.all([
-        modulesApi.getOne(slug),
-        modulesApi.getAll(),
-        quizApi.getQuiz(slug).catch(() => null),
-        onboardApi.getStatus().catch(() => ({ part1Done: true })),
-        // the ready-made share posts for this module's badge, once earned
-        certificateApi.getCertificate().catch(() => null),
-      ]);
-      setM(mod);
-      setAll(list.sort((a, b) => a.week - b.week));
+      const [mod, q, cert] = await Promise.all([modulePromise, quizPromise, certPromise]);
+      if (!current()) return;
       setQuiz(q);
-      setPart1Done(st.part1Done);
       setEarned(cert?.badges.find((b) => b.moduleSlug === mod.slug || (b.week !== null && b.week === mod.week)) ?? null);
     } catch {
-      setNotFound(true);
+      if (current()) setNotFound(true);
+    } finally {
+      if (current()) setQuizPending(false);
     }
   }, [slug]);
 
   useEffect(() => {
-    load();
+    load({ fresh: true });
   }, [load]);
 
   if (notFound) {
@@ -662,6 +685,13 @@ export default function ModuleView({ slug }: { slug: string }) {
 
           {/* Right Column: Quiz, Speakers, Share */}
           <div className="space-y-5 lg:col-span-4">
+            {quizPending ? (
+              <div className={`${card} animate-pulse motion-reduce:animate-none`} role="status" aria-label="Loading the quiz">
+                <div className="h-3 w-24 rounded bg-[#ececf2]" />
+                <div className="h-5 w-2/3 rounded bg-[#ececf2]" />
+                <div className="h-10 rounded bg-[#ececf2]" />
+              </div>
+            ) : (
             <QuizCard
               m={m}
               quiz={quiz}
@@ -679,6 +709,7 @@ export default function ModuleView({ slug }: { slug: string }) {
                 await load();
               }}
             />
+            )}
 
             {m.speakers && m.speakers.length > 0 && (
               <div className="space-y-3">
