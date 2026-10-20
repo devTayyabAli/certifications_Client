@@ -25,12 +25,9 @@ export default async function VerifyPage({
       currentStep={0}
       compactCard={true}
       headerAction={
-        <a
-          href="/help"
-          className="font-medium text-[#7c2ae8] transition-colors hover:text-[#6922cf] link-cta"
-        >
-          Need help?
-        </a>
+        <span className="text-[#5f5f7a]">
+          Need help? Please message <span className="font-medium text-[#171730]">dao@si3.space</span>.
+        </span>
       }
     >
       <h1 className="text-center text-xl font-medium tracking-tight text-[#171730]">

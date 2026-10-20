@@ -17,12 +17,9 @@ export default function VerifiedPage() {
     <OnboardingShell
       currentStep={1}
       headerAction={
-        <a
-          href="/help"
-          className="font-semibold text-brand transition-colors hover:text-brand-strong hover:underline"
-        >
-          Need help?
-        </a>
+        <span className="text-[#5f5f7a]">
+          Need help? Please message <span className="font-medium text-[#171730]">dao@si3.space</span>.
+        </span>
       }
     >
       <RequireAuth />
