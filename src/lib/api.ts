@@ -442,8 +442,26 @@ export interface ModuleItem {
   calendarOutdated?: boolean;
   addedToCalendarAt?: string | null;
   speakers: SpeakerItem[];
-  /** the badge post, with CMS wording and partner tags filled in */
-  share?: { x: string; linkedin: string } | null;
+  /** what to post for this badge: sample copy, handles to tag, session image */
+  share?: BadgeShare | null;
+}
+
+export interface ShareHandle {
+  /** e.g. "SI<3> LinkedIn", "Kara Howard X" */
+  label: string;
+  platform: 'x' | 'linkedin';
+  /** what the learner copies: "@si3_ecosystem" or a profile link */
+  handle: string;
+  url: string | null;
+}
+
+export interface BadgeShare {
+  /** sample post for the learner to customise */
+  text: string;
+  /** who to tag; only the handles set in the CMS */
+  handles: ShareHandle[];
+  /** the session image to download and post with */
+  image: string | null;
 }
 
 export const modulesApi = {
@@ -552,8 +570,8 @@ export interface CertificateBadge {
   /** the module the badge was earned in, for linking back to the session */
   moduleSlug?: string | null;
   earnedAt?: string;
-  /** ready-made posts for this badge, tagging the session's partners */
-  share?: { x: string; linkedin: string };
+  /** what to post for this badge: sample copy, handles to tag, session image */
+  share?: BadgeShare | null;
 }
 
 export interface CertificateOnChain {
