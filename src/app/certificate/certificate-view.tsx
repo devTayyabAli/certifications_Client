@@ -266,7 +266,7 @@ export default function CertificateView() {
                     ))}
                   </ul>
                   <p className="text-[10.5px] leading-relaxed text-[#8e8ea6]">
-                    Each post is written for you and tags the session’s partners. You can edit it before posting.
+                    Copy the sample text, make it your own, tag the handles listed and attach the session image.
                   </p>
                 </>
               )}
